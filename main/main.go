@@ -12,6 +12,7 @@ func main() {
 
 	fmt.Println("Serveur démarré sur le port 8080...")
 	http.ListenAndServe(":8080", nil)
+	fmt.Println("http://localhost:8080/")
 
 	// Dossier qui contient tes fichiers HTML, CSS, JS, images...
 	fs := http.FileServer(http.Dir("./static"))
