@@ -7,7 +7,19 @@ import (
 
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Bienvenue sur mon serveur Go !")
+		html := `
+		<!DOCTYPE html>
+		<html lang="fr">
+		<head>
+			<meta charset="UTF-8">
+			<title>Accueil</title>
+		</head>
+		<body>
+			<h1>Bienvenue sur mon serveur Go !</h1>
+			<button onclick="window.location.href='/static/index.html'">Jouer au Puissance 4</button>
+		</body>
+		</html>`
+		fmt.Fprint(w, html)
 	})
 
 	fmt.Println("Serveur démarré sur le port 8080...")
@@ -27,4 +39,5 @@ func main() {
 
 	// Lancer le serveur
 	http.ListenAndServe(":8080", nil)
+
 }
