@@ -8,8 +8,10 @@ import (
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "Bienvenue sur mon API Go !")
+		fmt.Fprintln(w, "HEHE!")
+
 	})
 
-	fmt.Println("Le port 8080 est utilisé pour lancer l'API Go !")
+	fmt.Println("url : http://localhost:8080/")
 	http.ListenAndServe(":8080", nil)
 }
