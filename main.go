@@ -6,12 +6,12 @@ import (
 )
 
 func main() {
-	fs := http.FileServer(http.Dir("./static"))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	fs := http.FileServer(http.Dir("/src"))
+	http.Handle("/src/", http.StripPrefix("/src/", fs))
 
 	// Handler pour la page du jeu, sur /jeu
 	http.HandleFunc("/jeu", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./static/index.html")
+		http.ServeFile(w, r, "./src/index.html")
 	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
