@@ -3,98 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <title>Puissance 4</title>
-  <style>
-    body { font-family: Arial, sans-serif; text-align: center; margin-top: 30px; }
-    table { margin: 0 auto; border-spacing: 5px; }
-    td {
-      width: 60px; height: 60px;
-      background-color: #eee;
-      border-radius: 50%;
-      cursor: pointer;
-    }
-    .player1 { background-color: red; }
-    .player2 { background-color: yellow; }
-    h1 { margin-bottom: 20px; }
-  </style>
+  <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <h1>Puissance 4</h1>
-  <p id="message">Joueur 1 (Rouge) commence</p>
+  <p id="message">Chargement...</p>
   <table id="board"></table>
+  <button onclick="resetGame()">Recommencer</button>
 
-  <script>
-    const ROWS = 6;
-    const COLS = 7;
-    let currentPlayer = 1; // 1 = rouge, 2 = jaune
-    let board = [];
-
-    const boardEl = document.getElementById("board");
-    const messageEl = document.getElementById("message");
-
-    function createBoard() {
-      boardEl.innerHTML = "";
-      board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
-
-      for (let r = 0; r < ROWS; r++) {
-        const row = document.createElement("tr");
-        for (let c = 0; c < COLS; c++) {
-          const cell = document.createElement("td");
-          cell.dataset.row = r;
-          cell.dataset.col = c;
-          cell.addEventListener("click", handleClick);
-          row.appendChild(cell);
-        }
-        boardEl.appendChild(row);
-      }
-    }
-
-    function handleClick(e) {
-      const col = parseInt(e.target.dataset.col);
-      for (let r = ROWS - 1; r >= 0; r--) {
-        if (board[r][col] === 0) {
-          board[r][col] = currentPlayer;
-          const cell = boardEl.rows[r].cells[col];
-          cell.classList.add(currentPlayer === 1 ? "player1" : "player2");
-
-          if (checkWin(r, col)) {
-            messageEl.textContent = `Joueur ${currentPlayer} a gagné ! 🎉`;
-            boardEl.querySelectorAll("td").forEach(td => td.removeEventListener("click", handleClick));
-          } else {
-            currentPlayer = 3 - currentPlayer; // switch player
-            messageEl.textContent = `Tour du joueur ${currentPlayer} (${currentPlayer === 1 ? "Rouge" : "Jaune"})`;
-          }
-          break;
-        }
-      }
-    }
-
-    function checkWin(row, col) {
-      const directions = [
-        [0, 1], [1, 0], [1, 1], [1, -1]
-      ];
-
-      for (const [dr, dc] of directions) {
-        let count = 1;
-        count += countDirection(row, col, dr, dc);
-        count += countDirection(row, col, -dr, -dc);
-        if (count >= 4) return true;
-      }
-      return false;
-    }
-
-    function countDirection(r, c, dr, dc) {
-      let count = 0;
-      let player = board[r][c];
-      while (true) {
-        r += dr;
-        c += dc;
-        if (r < 0 || r >= ROWS || c < 0 || c >= COLS || board[r][c] !== player) break;
-        count++;
-      }
-      return count;
-    }
-
-    createBoard();
-  </script>
+  <script src="/static/script.js"></script>
 </body>
 </html>
