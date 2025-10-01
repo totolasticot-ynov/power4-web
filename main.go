@@ -2,7 +2,7 @@ package main
 
 import (
     "log"
-    "power4-web/src/menu"
+    "github.com/totolasticot-ynov/power4-web/src/menu"
 )
 
 func main() {
