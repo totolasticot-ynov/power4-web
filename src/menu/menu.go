@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func menu() {
+func Menu() error {
 	fs := http.FileServer(http.Dir("/src"))
 	http.Handle("/src/", http.StripPrefix("/src/", fs))
 
@@ -33,5 +33,5 @@ func menu() {
 	fmt.Println("Serveur démarré sur le port 8080...")
 	fmt.Println("http://localhost:8080/")
 
-	http.ListenAndServe(":8080", nil)
+	return http.ListenAndServe(":8080", nil)
 }
