@@ -1,9 +1,9 @@
 package menu
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
-	"encoding/json"
 )
 
 func Menu() error {
@@ -16,7 +16,7 @@ func Menu() error {
 
 	var (
 		rows, cols = 6, 7
-		state = GameState{
+		state      = GameState{
 			Board:         make([][]int, rows),
 			CurrentPlayer: 1,
 			Winner:        0,
@@ -100,29 +100,55 @@ func Menu() error {
 	http.Handle("/src/", http.StripPrefix("/src/", fs))
 
 	// Handler pour la page du jeu, sur /jeu
-	http.HandleFunc("/jeu", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./src/index/index.html")
-	})
-
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		html := `
-		<!DOCTYPE html>
-		<html lang="fr">
-		<head>
-			<meta charset="UTF-8">
-			<title>Accueil</title>
-		</head>
-		<body>
-			<h1>Bienvenue sur mon serveur Go !</h1>
-			<h1>Vous pouvez jouer au puissance 4 en appuyant sur le bouton ci-dessous</h1>
-			<a href="/jeu" style="padding:10px 20px; background:#28a745; color:#fff; text-decoration:none; border-radius:5px; display:inline-block;">Jouer au Puissance 4</a>
-		</body>
-		</html>`
+	<!DOCTYPE html>
+	<html lang="fr">
+	<head>
+		<meta charset="UTF-8">
+		<title>Accueil</title>
+		<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+		<style>
+			body {
+				font-family: 'Poppins', sans-serif;
+				background: linear-gradient(135deg, #74ABE2, #5563DE);
+				color: white;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				height: 100vh;
+				margin: 0;
+				text-align: center;
+			}
+			h1 {
+				font-size: 2.2rem;
+				margin-bottom: 1rem;
+			}
+			a.button {
+				background: #ffffff;
+				color: #5563DE;
+				padding: 12px 25px;
+				font-weight: 600;
+				text-decoration: none;
+				border-radius: 8px;
+				transition: all 0.3s ease;
+				box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+			}
+			a.button:hover {
+				background: #f2f2f2;
+				transform: translateY(-3px);
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Bienvenue sur mon serveur Go 🚀</h1>
+		<h1>Jouez au Puissance 4 contre un ami !</h1>
+		<a href="/jeu" class="button">🎮 Jouer au Puissance 4</a>
+	</body>
+	</html>`
 		fmt.Fprint(w, html)
 	})
-
-	fmt.Println("Serveur démarré sur le port 8080...")
-	fmt.Println("http://localhost:8080/")
-
+	fmt.Println("Serveur démarré sur http://localhost:8080 🚀")
 	return http.ListenAndServe(":8080", nil)
 }
