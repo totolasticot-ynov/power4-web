@@ -1,65 +1,58 @@
 const boardEl = document.getElementById("board");
-const messageEl = document.getElementById("message");
-
+const resetBtn = document.getElementById("resetBtn");
 let currentPlayer = 1;
 let winner = 0;
 
 async function fetchBoard() {
   const res = await fetch("/api/board");
-  const data = await res.json();
-  renderBoard(data.board);
-  currentPlayer = data.currentPlayer;
-  winner = data.winner;
-
-  if (winner) {
-    messageEl.textContent = `Joueur ${winner} a gagné ! 🎉`;
-  } else {
-    messageEl.textContent = `Tour du joueur ${currentPlayer} (${currentPlayer === 1 ? "Rouge" : "Jaune"})`;
-  }
+  const state = await res.json();
+  renderBoard(state);
 }
 
-function renderBoard(board) {
-  boardEl.innerHTML = "";
-  for (let r = 0; r < board.length; r++) {
-    const row = document.createElement("tr");
-    for (let c = 0; c < board[r].length; c++) {
-      const cell = document.createElement("td");
-      cell.dataset.col = c;
-      if (board[r][c] === 1) cell.classList.add("player1");
-      else if (board[r][c] === 2) cell.classList.add("player2");
-      cell.addEventListener("click", handleClick);
-      row.appendChild(cell);
-    }
-    boardEl.appendChild(row);
-  }
-}
-
-async function handleClick(e) {
-  if (winner) return;
-
-  const col = parseInt(e.target.dataset.col);
-  const res = await fetch("/api/play", {
+async function play(col) {
+  if (winner !== 0) return;
+  await fetch("/api/play", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ column: col })
+    body: JSON.stringify({ Column: col }),
   });
-
-  const data = await res.json();
-  renderBoard(data.board);
-  currentPlayer = data.currentPlayer;
-  winner = data.winner;
-
-  if (winner) {
-    messageEl.textContent = `Joueur ${winner} a gagné ! 🎉`;
-  } else {
-    messageEl.textContent = `Tour du joueur ${currentPlayer} (${currentPlayer === 1 ? "Rouge" : "Jaune"})`;
-  }
+  fetchBoard();
 }
 
 async function resetGame() {
   await fetch("/api/reset", { method: "POST" });
-  winner = 0;
   fetchBoard();
 }
 
-window.onload = fetchBoard;
+function renderBoard(state) {
+  boardEl.innerHTML = "";
+  currentPlayer = state.currentPlayer;
+  winner = state.winner;
+
+  state.board.forEach((row, r) => {
+    row.forEach((cell, c) => {
+      const cellEl = document.createElement("div");
+      cellEl.classList.add("cell");
+      cellEl.addEventListener("click", () => play(c));
+
+      if (cell !== 0) {
+        const token = document.createElement("div");
+        token.classList.add("token", cell === 1 ? "player1" : "player2");
+        cellEl.appendChild(token);
+      }
+
+      boardEl.appendChild(cellEl);
+    });
+  });
+
+  if (winner !== 0) {
+    document.querySelector("h1").textContent = `🎉 Joueur ${winner} a gagné !`;
+    // Animation sur les pions gagnants (bonus simple)
+    document.querySelectorAll(".token").forEach(el => el.classList.add("winner"));
+  } else {
+    document.querySelector("h1").textContent = `Tour du joueur ${currentPlayer}`;
+  }
+}
+
+resetBtn.addEventListener("click", resetGame);
+fetchBoard();
