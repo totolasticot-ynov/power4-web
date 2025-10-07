@@ -7,6 +7,14 @@ import (
 )
 
 func Menu() error {
+	// Sert les fichiers statiques du dossier assets (CSS, images, etc.)
+	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("assets"))))
+	// Sert les fichiers JS du dossier src/script
+	http.Handle("/src/script/", http.StripPrefix("/src/script/", http.FileServer(http.Dir("./src/script"))))
+	// Handler pour la page du jeu, sur /jeu
+	http.HandleFunc("/jeu", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./templates/index/index.html")
+	})
 	// --- Logique du jeu Puissance 4 ---
 	type GameState struct {
 		Board         [][]int `json:"board"`
@@ -100,6 +108,7 @@ func Menu() error {
 	http.Handle("/src/", http.StripPrefix("/src/", fs))
 
 	// Handler pour la page du jeu, sur /jeu
+	// Handler racine (à placer en dernier)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		html := `
 	<!DOCTYPE html>
