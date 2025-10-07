@@ -121,24 +121,8 @@ func Menu() error {
 				margin: 0;
 				text-align: center;
 			}
-			h1 {
-				font-size: 2.2rem;
-				margin-bottom: 1rem;
-			}
-			a.button {
-				background: #ffffff;
-				color: #5563DE;
-				padding: 12px 25px;
-				font-weight: 600;
-				text-decoration: none;
-				border-radius: 8px;
-				transition: all 0.3s ease;
-				box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-			}
-			a.button:hover {
-				background: #f2f2f2;
-				transform: translateY(-3px);
-			}
+			h1 { font-size: 2.2rem; margin-bottom: 1rem; }
+			a.button { background: #ffffff; color: #5563DE; padding: 12px 25px; font-weight:600; text-decoration:none; border-radius:8px }
 		</style>
 	</head>
 	<body>
@@ -147,6 +131,26 @@ func Menu() error {
 		<a href="/jeu" class="button">🎮 Jouer au Puissance 4</a>
 	</body>
 	</html>`
+		fmt.Fprint(w, html)
+	})
+
+	http.HandleFunc("/jeu", func(w http.ResponseWriter, r *http.Request) {
+		html := `
+		<!DOCTYPE html>
+		<html lang="fr">
+		<head>
+			<meta charset="UTF-8">
+			<title>Puissance 4</title>
+			<link rel="stylesheet" href="/src/style/style.css">
+		</head>
+		<body>
+			<h1>Puissance 4</h1>
+			<p id="message">Chargement...</p>
+			<div id="board" class="board"></div>
+			<button id="resetBtn">Recommencer</button>
+			<script src="/src/script/script.js"></script>
+		</body>
+		</html>`
 		fmt.Fprint(w, html)
 	})
 	fmt.Println("Serveur démarré sur http://localhost:8080 🚀")

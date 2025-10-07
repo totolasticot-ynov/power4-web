@@ -1,0 +1,54 @@
+body {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  margin-top: 30px;
+}
+
+#board {
+  display: grid;
+  grid-template-columns: repeat(7, 60px);
+  grid-auto-rows: 60px;
+  gap: 8px;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.cell {
+  width: 60px;
+  height: 60px;
+  background-color: #eee;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.token {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+
+.player1 {
+  background-color: red;
+}
+
+.player2 {
+  background-color: yellow;
+}
+
+h1 {
+  margin-bottom: 20px;
+}
+
+body {
+  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+  color: white;
+}
+
+.token.winner {
+  box-shadow: 0 0 18px 6px rgba(255,255,255,0.2);
+  transform: scale(1.05);
+  transition: transform 300ms ease;
+}

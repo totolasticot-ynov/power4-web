@@ -7,7 +7,7 @@ async function fetchBoard() {
   const res = await fetch("/api/board");
   const state = await res.json();
   renderBoard(state);
-}
+} 
 
 async function play(col) {
   if (winner !== 0) return;
