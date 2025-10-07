@@ -12,9 +12,7 @@ func Menu() error {
 	// Sert les fichiers JS du dossier src/script
 	http.Handle("/src/script/", http.StripPrefix("/src/script/", http.FileServer(http.Dir("./src/script"))))
 	// Handler pour la page du jeu, sur /jeu
-	http.HandleFunc("/jeu", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./templates/index/index.html")
-	})
+
 	// --- Logique du jeu Puissance 4 ---
 	type GameState struct {
 		Board         [][]int `json:"board"`
