@@ -52,5 +52,5 @@ function renderBoard(state) {
   } else {
     document.querySelector("h1").textContent = `Tour du joueur ${currentPlayer}`;
   }
-  
 }
+
