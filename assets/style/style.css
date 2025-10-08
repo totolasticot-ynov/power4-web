@@ -1,3 +1,50 @@
+/* Modal Règles Puissance 4 */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 100;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: auto;
+    background: rgba(0,0,0,0.35);
+    animation: fadeIn 0.2s;
+}
+.modal-content {
+    background: #f7f7ff;
+    color: #222;
+    margin: 8% auto;
+    padding: 30px 30px 20px 30px;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 480px;
+    box-shadow: 0 8px 32px 0 rgba(31,38,135,0.25);
+    position: relative;
+    text-align: center;
+    font-size: 1.08rem;
+}
+.modal-content h2 {
+    margin-top: 0;
+    color: #5563DE;
+}
+.close {
+    color: #aaa;
+    position: absolute;
+    top: 12px;
+    right: 18px;
+    font-size: 2rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.close:hover {
+    color: #e53935;
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
 .win-token {
     box-shadow: 0 0 18px 6px #fff176, 0 0 0 3px #fffde7;
     border: 3px solid #fffde7;
@@ -91,7 +138,8 @@ h1, h2 {
     font-weight: 600;
 }
 
-.button {
+
+a.button, button.button {
     background: #fff;
     color: #5563DE;
     padding: 12px 25px;
@@ -100,11 +148,19 @@ h1, h2 {
     border-radius: 8px;
     margin-top: 20px;
     display: inline-block;
-    transition: background 0.2s, color 0.2s;
+    border: none;
+    font-size: 1.08rem;
+    min-width: 170px;
+    min-height: 48px;
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px rgba(85,99,222,0.08);
 }
-.button:hover {
+a.button:hover, button.button:hover {
     background: #5563DE;
     color: #fff;
+    box-shadow: 0 4px 16px rgba(85,99,222,0.18);
 }
 
 .container {
