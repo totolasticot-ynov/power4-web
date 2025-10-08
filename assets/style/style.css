@@ -1,54 +1,80 @@
-body {
-  font-family: Arial, sans-serif;
-  text-align: center;
-  margin-top: 30px;
+body, html {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
 }
 
-#board {
-  display: grid;
-  grid-template-columns: repeat(7, 60px);
-  grid-auto-rows: 60px;
-  gap: 8px;
-  justify-content: center;
-  margin: 0 auto 20px;
+.background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #74ebd5, #acb6e5);
+    z-index: -1;
+    animation: moveBg 20s linear infinite;
+}
+
+@keyframes moveBg {
+    0% { background-position: 0 0; }
+    100% { background-position: 1000px 1000px; }
+}
+
+.game-container {
+    text-align: center;
+    background: rgba(255, 255, 255, 0.85);
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.board {
+    display: grid;
+    grid-template-columns: repeat(7, 60px);
+    grid-template-rows: repeat(6, 60px);
+    gap: 5px;
+    margin: 20px auto;
 }
 
 .cell {
-  width: 60px;
-  height: 60px;
-  background-color: #eee;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+    width: 60px;
+    height: 60px;
+    background: #eee;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 0.3s;
 }
 
-.token {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
+.cell:hover {
+    transform: scale(1.1);
 }
 
-.player1 {
-  background-color: red;
+.cell.red {
+    background: red;
 }
 
-.player2 {
-  background-color: yellow;
+.cell.yellow {
+    background: yellow;
 }
 
-h1 {
-  margin-bottom: 20px;
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    background: #74ebd5;
+    transition: background 0.3s;
 }
 
-body {
-  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-  color: white;
-}
-
-.token.winner {
-  box-shadow: 0 0 18px 6px rgba(255,255,255,0.2);
-  transform: scale(1.05);
-  transition: transform 300ms ease;
+button:hover {
+    background: #acb6e5;
 }
