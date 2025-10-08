@@ -1,67 +1,69 @@
-const rows = 6;
-const cols = 7;
-let currentPlayer = 'red';
-let board = [];
 
-const boardElement = document.getElementById('board');
-const resetButton = document.getElementById('reset');
+const boardEl = document.getElementById("board");
+const resetBtn = document.getElementById("resetBtn");
+let currentPlayer = 1;
+let winner = 0;
 
-function initBoard() {
-    board = Array.from({ length: rows }, () => Array(cols).fill(null));
-    boardElement.innerHTML = '';
-    for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-            const cell = document.createElement('div');
-            cell.classList.add('cell');
-            cell.dataset.row = r;
-            cell.dataset.col = c;
-            cell.addEventListener('click', handleCellClick);
-            boardElement.appendChild(cell);
-        }
-    }
+
+const message = document.getElementById('message');
+
+async function fetchBoard() {
+  const res = await fetch("/api/board");
+  const state = await res.json();
+  renderBoard(state);
+  updateMessage(state);
 }
 
-function handleCellClick(e) {
-    const col = e.target.dataset.col;
-    for (let r = rows - 1; r >= 0; r--) {
-        if (!board[r][col]) {
-            board[r][col] = currentPlayer;
-            const cell = boardElement.querySelector(`.cell[data-row='${r}'][data-col='${col}']`);
-            cell.classList.add(currentPlayer);
-            if (checkWin(r, col)) {
-                setTimeout(() => alert(`${currentPlayer.toUpperCase()} a gagné!`), 100);
-                return;
-            }
-            currentPlayer = currentPlayer === 'red' ? 'yellow' : 'red';
-            break;
-        }
-    }
+async function play(col) {
+  if (winner !== 0) return;
+  await fetch("/api/play", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ column: col }), // clé en minuscule !
+  });
+  fetchBoard();
 }
 
-function checkWin(r, c) {
-    const directions = [
-        [[0,1],[0,-1]],   // horizontal
-        [[1,0],[-1,0]],   // vertical
-        [[1,1],[-1,-1]],  // diagonale \
-        [[1,-1],[-1,1]]   // diagonale /
-    ];
-
-    for (let dir of directions) {
-        let count = 1;
-        for (let [dr, dc] of dir) {
-            let nr = r + dr;
-            let nc = c + dc;
-            while (nr >= 0 && nr < rows && nc >= 0 && nc < cols && board[nr][nc] === currentPlayer) {
-                count++;
-                nr += dr;
-                nc += dc;
-            }
-        }
-        if (count >= 4) return true;
-    }
-    return false;
+async function resetGame() {
+  await fetch("/api/reset", { method: "POST" });
+  fetchBoard();
 }
 
-resetButton.addEventListener('click', initBoard);
+function renderBoard(state) {
+  boardEl.innerHTML = "";
+  currentPlayer = state.currentPlayer;
+  winner = state.winner;
 
-initBoard();
+  state.board.forEach((row, r) => {
+    row.forEach((cell, c) => {
+      const cellEl = document.createElement("div");
+      cellEl.classList.add("cell");
+      cellEl.addEventListener("click", () => play(c));
+
+      if (cell !== 0) {
+        const token = document.createElement("div");
+        token.classList.add("token", cell === 1 ? "player1" : "player2");
+        cellEl.appendChild(token);
+      } else {
+        cellEl.style.opacity = '0.5';
+      }
+
+      boardEl.appendChild(cellEl);
+    });
+  });
+}
+
+function updateMessage(state) {
+  if (state.winner === 1) {
+    message.textContent = 'Joueur 1 (jaune) a gagné !';
+  } else if (state.winner === 2) {
+    message.textContent = 'Joueur 2 (bleu) a gagné !';
+  } else {
+    message.textContent = `À ${state.currentPlayer === 1 ? 'jaune' : 'bleu'} de jouer.`;
+  }
+}
+
+if (resetBtn) resetBtn.onclick = resetGame;
+
+fetchBoard();
+

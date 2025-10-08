@@ -1,18 +1,13 @@
 package menu
 
 import (
-	"html/template"
-	"net/http"
-	"path/filepath"
+	"log"
+
+	"github.com/totolasticot-ynov/power4-web/src/menu"
 )
 
-// MenuHandler affiche la page du menu principal
-func MenuHandler(w http.ResponseWriter, r *http.Request) {
-	tmplPath := filepath.Join("templates", "menu.html")
-	tmpl, err := template.ParseFiles(tmplPath)
-	if err != nil {
-		http.Error(w, "Erreur template menu", http.StatusInternalServerError)
-		return
+func main() {
+	if err := menu.Menu(); err != nil {
+		log.Fatalf("Erreur lors de l’exécution du serveur : %v", err)
 	}
-	tmpl.Execute(w, nil)
 }
