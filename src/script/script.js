@@ -7,6 +7,9 @@ let winner = 0;
 
 const message = document.getElementById('message');
 
+
+
+
 async function fetchBoard() {
   const res = await fetch("/api/board");
   const state = await res.json();
@@ -29,10 +32,30 @@ async function resetGame() {
   fetchBoard();
 }
 
+let lastMove = null;
+
 function renderBoard(state) {
   boardEl.innerHTML = "";
   currentPlayer = state.currentPlayer;
   winner = state.winner;
+
+  // Prépare la liste des cases gagnantes (pour surbrillance)
+  const winCells = Array.isArray(state.winCells) ? state.winCells.map(([r, c]) => `${r},${c}`) : [];
+
+  // Trouver la dernière case jouée (pour l'animation)
+  if (lastMove && state.board[lastMove.row][lastMove.col] === 0) {
+    lastMove = null;
+  }
+  // Recherche la dernière case jouée (diff entre board et oldBoard)
+  if (window.oldBoard) {
+    for (let r = 0; r < state.board.length; r++) {
+      for (let c = 0; c < state.board[r].length; c++) {
+        if (window.oldBoard[r][c] !== state.board[r][c] && state.board[r][c] !== 0) {
+          lastMove = { row: r, col: c, player: state.board[r][c] };
+        }
+      }
+    }
+  }
 
   state.board.forEach((row, r) => {
     row.forEach((cell, c) => {
@@ -42,7 +65,17 @@ function renderBoard(state) {
 
       if (cell !== 0) {
         const token = document.createElement("div");
-        token.classList.add("token", cell === 1 ? "player1" : "player2");
+        token.classList.add("token", cell === 1 ? "p1" : "p2");
+        // Animation de chute si c'est le dernier pion joué
+        if (lastMove && lastMove.row === r && lastMove.col === c) {
+          token.classList.add("fall-real");
+          token.style.setProperty('--fall-dist', `${(r) * 68}px`);
+          token.style.setProperty('--fall-dur', `${0.12 + r*0.07}s`);
+        }
+        // Highlight si fait partie de la ligne gagnante
+        if (winCells.includes(`${r},${c}`)) {
+          token.classList.add("win-token");
+        }
         cellEl.appendChild(token);
       } else {
         cellEl.style.opacity = '0.5';
@@ -51,15 +84,19 @@ function renderBoard(state) {
       boardEl.appendChild(cellEl);
     });
   });
+  // Sauvegarde du plateau pour la prochaine animation
+  window.oldBoard = state.board.map(row => row.slice());
 }
+
 
 function updateMessage(state) {
   if (state.winner === 1) {
-    message.textContent = 'Joueur 1 (jaune) a gagné !';
+    message.innerHTML = 'Joueur 1 (<span class="jaune">jaune</span>) a gagné !';
   } else if (state.winner === 2) {
-    message.textContent = 'Joueur 2 (rouge) a gagné !';
+    message.innerHTML = 'Joueur 2 (<span class="rouge">rouge</span>) a gagné !';
   } else {
-    message.textContent = `À ${state.currentPlayer === 1 ? 'jaune' : 'rouge'} de jouer.`;
+    const color = state.currentPlayer === 1 ? '<span class="jaune">jaune</span>' : '<span class="rouge">rouge</span>';
+    message.innerHTML = `À ${color} de jouer.`;
   }
 }
 

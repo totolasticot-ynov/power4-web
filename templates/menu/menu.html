@@ -11,6 +11,51 @@
         <h1>Bienvenue sur mon serveur Go 🚀</h1>
         <h2>Jouez au Puissance 4 contre un ami !</h2>
         <a href="/jeu" class="button">🎮 Jouer au Puissance 4</a>
+        <button class="button" id="rulesBtn">📖 Règles</button>
     </div>
+    <button class="button" id="historyBtn" style="position:fixed;bottom:32px;right:32px;z-index:101;box-shadow:0 2px 8px rgba(85,99,222,0.18);">📜 Histoire</button>
+    <div id="historyModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close" id="closeHistory">&times;</span>
+            <h2>Histoire du projet</h2>
+            <p>Ce projet Puissance 4 a été créé pour apprendre Go, le web et le fun !<br>Il a évolué grâce à de nombreux tests et ajustements.<br>La suite dépend de vos idées...</p>
+        </div>
+    </div>
+    <div id="rulesModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close" id="closeRules">&times;</span>
+            <h2>Règles du Puissance 4</h2>
+            <ul style="text-align:left;max-width:400px;margin:auto;">
+                <li>Le jeu se joue à deux joueurs, chacun leur tour.</li>
+                <li>À chaque tour, un joueur place un pion de sa couleur dans une colonne.</li>
+                <li>Le pion tombe jusqu'à la première case libre de la colonne.</li>
+                <li>Le but est d'aligner 4 pions de sa couleur horizontalement, verticalement ou en diagonale.</li>
+                <li>Le premier à aligner 4 pions gagne la partie.</li>
+                <li>Si la grille est pleine sans gagnant, la partie est nulle.</li>
+            </ul>
+        </div>
+    </div>
+    <script>
+    document.getElementById('rulesBtn').onclick = function() {
+        document.getElementById('rulesModal').style.display = 'block';
+    };
+    document.getElementById('closeRules').onclick = function() {
+        document.getElementById('rulesModal').style.display = 'none';
+    };
+    document.getElementById('historyBtn').onclick = function() {
+        document.getElementById('historyModal').style.display = 'block';
+    };
+    document.getElementById('closeHistory').onclick = function() {
+        document.getElementById('historyModal').style.display = 'none';
+    };
+    window.onclick = function(event) {
+        if (event.target === document.getElementById('rulesModal')) {
+            document.getElementById('rulesModal').style.display = 'none';
+        }
+        if (event.target === document.getElementById('historyModal')) {
+            document.getElementById('historyModal').style.display = 'none';
+        }
+    };
+    </script>
 </body>
 </html>

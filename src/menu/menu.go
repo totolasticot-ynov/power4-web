@@ -8,6 +8,7 @@ import (
 )
 
 type GameState struct {
+<<<<<<< HEAD
 	Board         [][]int `json:"board"`
 	CurrentPlayer int     `json:"currentPlayer"`
 	Winner        int     `json:"winner"`
@@ -20,6 +21,22 @@ var (
 		CurrentPlayer: 1,
 		Winner:        0,
 	}
+=======
+    Board         [][]int     `json:"board"`
+    CurrentPlayer int         `json:"currentPlayer"`
+    Winner        int         `json:"winner"`
+    WinCells      [][2]int    `json:"winCells"`
+}
+
+var (
+    rows, cols = 6, 7
+    state      = GameState{
+        Board:         make([][]int, 6),
+        CurrentPlayer: 1,
+        Winner:        0,
+        WinCells:      nil,
+    }
+>>>>>>> b10da43a1b2932ed028697d804aca13e6e87757c
 )
 
 func init() {
@@ -33,6 +50,7 @@ func Menu() error {
 	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("assets"))))
 	http.Handle("/src/", http.StripPrefix("/src/", http.FileServer(http.Dir("src"))))
 
+<<<<<<< HEAD
 	// API: état du jeu
 	http.HandleFunc("/api/board", func(w http.ResponseWriter, r *http.Request) {
 		state.Winner = checkWinner(state.Board)
@@ -61,6 +79,36 @@ func Menu() error {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(state)
 	})
+=======
+    // API: état du jeu
+    http.HandleFunc("/api/board", func(w http.ResponseWriter, r *http.Request) {
+        state.Winner, state.WinCells = checkWinner(state.Board)
+        w.Header().Set("Content-Type", "application/json")
+        _ = json.NewEncoder(w).Encode(state)
+    })
+
+    // API: jouer un coup
+    http.HandleFunc("/api/play", func(w http.ResponseWriter, r *http.Request) {
+        if state.Winner != 0 {
+            w.Header().Set("Content-Type", "application/json")
+            _ = json.NewEncoder(w).Encode(state)
+            return
+        }
+        var req struct{ Column int }
+        _ = json.NewDecoder(r.Body).Decode(&req)
+        col := req.Column
+        for r := rows - 1; r >= 0; r-- {
+            if state.Board[r][col] == 0 {
+                state.Board[r][col] = state.CurrentPlayer
+                state.CurrentPlayer = 3 - state.CurrentPlayer
+                break
+            }
+        }
+        state.Winner, state.WinCells = checkWinner(state.Board)
+        w.Header().Set("Content-Type", "application/json")
+        _ = json.NewEncoder(w).Encode(state)
+    })
+>>>>>>> b10da43a1b2932ed028697d804aca13e6e87757c
 
 	// API: reset
 	http.HandleFunc("/api/reset", func(w http.ResponseWriter, r *http.Request) {
@@ -88,6 +136,7 @@ func Menu() error {
 	return http.ListenAndServe(":8080", nil)
 }
 
+<<<<<<< HEAD
 func checkWinner(board [][]int) int {
 	for r := 0; r < rows; r++ {
 		for c := 0; c < cols; c++ {
@@ -114,6 +163,35 @@ func checkWinner(board [][]int) int {
 		}
 	}
 	return 0
+=======
+func checkWinner(board [][]int) (int, [][2]int) {
+    // Renvoie (winner, [cases gagnantes])
+    for r := 0; r < rows; r++ {
+        for c := 0; c < cols; c++ {
+            player := board[r][c]
+            if player == 0 {
+                continue
+            }
+            // Horizontal
+            if c+3 < cols && player == board[r][c+1] && player == board[r][c+2] && player == board[r][c+3] {
+                return player, [][2]int{{r, c}, {r, c+1}, {r, c+2}, {r, c+3}}
+            }
+            // Vertical
+            if r+3 < rows && player == board[r+1][c] && player == board[r+2][c] && player == board[r+3][c] {
+                return player, [][2]int{{r, c}, {r+1, c}, {r+2, c}, {r+3, c}}
+            }
+            // Diagonal droite
+            if r+3 < rows && c+3 < cols && player == board[r+1][c+1] && player == board[r+2][c+2] && player == board[r+3][c+3] {
+                return player, [][2]int{{r, c}, {r+1, c+1}, {r+2, c+2}, {r+3, c+3}}
+            }
+            // Diagonal gauche
+            if r+3 < rows && c-3 >= 0 && player == board[r+1][c-1] && player == board[r+2][c-2] && player == board[r+3][c-3] {
+                return player, [][2]int{{r, c}, {r+1, c-1}, {r+2, c-2}, {r+3, c-3}}
+            }
+        }
+    }
+    return 0, nil
+>>>>>>> b10da43a1b2932ed028697d804aca13e6e87757c
 }
 
 func renderTemplate(w http.ResponseWriter, path string, data any) {

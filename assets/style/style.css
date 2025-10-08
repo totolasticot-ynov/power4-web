@@ -1,3 +1,138 @@
+.p1 {
+    background: radial-gradient(circle at 30% 30%, #ffecb3, #fbc02d 80%);
+}
+.p2 {
+    background: radial-gradient(circle at 30% 30%, #ffb3b3, #e53935 80%);
+}
+.jaune {
+    color: #fbc02d;
+    font-weight: bold;
+}
+.rouge {
+    color: #e53935;
+    font-weight: bold;
+}
+.violet {
+    color: #8e24aa;
+    font-weight: bold;
+}
+.vert {
+    color: #43a047;
+    font-weight: bold;
+}
+.violet {
+    background: radial-gradient(circle at 30% 30%, #e1b3ff, #8e24aa 80%);
+    color: #8e24aa;
+}
+.vert {
+    background: radial-gradient(circle at 30% 30%, #b3ffd1, #43a047 80%);
+    color: #43a047;
+}
+.violet.jaune, .violet.rouge, .violet.vert, .violet.violet {
+    color: #8e24aa !important;
+}
+.vert.jaune, .vert.rouge, .vert.vert, .vert.violet {
+    color: #43a047 !important;
+}
+/* Modal Règles Puissance 4 */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 100;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: auto;
+    background: rgba(0,0,0,0.35);
+    animation: fadeIn 0.2s;
+}
+.modal-content {
+    background: #f7f7ff;
+    color: #222;
+    margin: 8% auto;
+    padding: 30px 30px 20px 30px;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 480px;
+    box-shadow: 0 8px 32px 0 rgba(31,38,135,0.25);
+    position: relative;
+    text-align: center;
+    font-size: 1.08rem;
+}
+.modal-content h2 {
+    margin-top: 0;
+    color: #5563DE;
+}
+.close {
+    color: #aaa;
+    position: absolute;
+    top: 12px;
+    right: 18px;
+    font-size: 2rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.close:hover {
+    color: #e53935;
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+.win-token {
+    box-shadow: 0 0 18px 6px #fff176, 0 0 0 3px #fffde7;
+    border: 3px solid #fffde7;
+    z-index: 2;
+    position: relative;
+    animation: win-glow 0.7s infinite alternate;
+}
+
+@keyframes win-glow {
+    from { box-shadow: 0 0 18px 6px #fff176, 0 0 0 3px #fffde7; }
+    to   { box-shadow: 0 0 32px 12px #fffde7, 0 0 0 3px #fffde7; }
+}
+.jaune {
+    color: #fbc02d;
+    font-weight: bold;
+}
+.rouge {
+    color: #e53935;
+    font-weight: bold;
+}
+.fall-real {
+    animation: fall-real var(--fall-dur,0.5s) cubic-bezier(.3,1.2,.3,1) both;
+}
+
+@keyframes fall-real {
+    0% {
+        transform: translateY(calc(-1 * var(--fall-dist, 0px))) scale(0.7);
+        opacity: 0.2;
+    }
+    100% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+.fall {
+    animation: fall-token 0.45s cubic-bezier(.4,1.6,.4,1) both;
+}
+
+@keyframes fall-token {
+    0% {
+        transform: translateY(-220px) scale(0.7);
+        opacity: 0.2;
+    }
+    70% {
+        transform: translateY(10px) scale(1.1);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
 .token {
     width: 48px;
     height: 48px;
@@ -5,11 +140,13 @@
     margin: auto;
     box-shadow: 0 2px 8px rgba(0,0,0,0.10);
 }
-.player1 {
-    background: radial-gradient(circle at 30% 30%, #ffecb3, #fbc02d 80%);
+.jaune {
+    color: #fbc02d;
+    font-weight: bold;
 }
-.player2 {
-    background: radial-gradient(circle at 30% 30%, #ffb3b3, #e53935 80%);
+.rouge {
+    color: #e53935;
+    font-weight: bold;
 }
 body {
     font-family: 'Poppins', Arial, sans-serif;
@@ -39,7 +176,8 @@ h1, h2 {
     font-weight: 600;
 }
 
-.button {
+
+a.button, button.button {
     background: #fff;
     color: #5563DE;
     padding: 12px 25px;
@@ -48,11 +186,19 @@ h1, h2 {
     border-radius: 8px;
     margin-top: 20px;
     display: inline-block;
-    transition: background 0.2s, color 0.2s;
+    border: none;
+    font-size: 1.08rem;
+    min-width: 170px;
+    min-height: 48px;
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px rgba(85,99,222,0.08);
 }
-.button:hover {
+a.button:hover, button.button:hover {
     background: #5563DE;
     color: #fff;
+    box-shadow: 0 4px 16px rgba(85,99,222,0.18);
 }
 
 .container {
@@ -94,7 +240,7 @@ h1, h2 {
     background: radial-gradient(circle at 30% 30%, #ffecb3, #fbc02d 80%);
 }
 .p2 {
-    background: radial-gradient(circle at 30% 30%, #b3e5fc, #0288d1 80%);
+    background: radial-gradient(circle at 30% 30%, #ffb3b3, #e53935 80%);
 }
 
 #message {
