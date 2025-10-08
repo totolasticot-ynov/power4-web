@@ -148,7 +148,7 @@ func Menu() error {
 		<head>
 			<meta charset="UTF-8">
 			<title>Puissance 4</title>
-			<link rel="stylesheet" href="/src/style/style.css">
+			<link rel="stylesheet" href="/assets/style/style.css">
 		</head>
 		<body>
 			<h1>Puissance 4</h1>
