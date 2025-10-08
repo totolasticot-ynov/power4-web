@@ -1,3 +1,39 @@
+.p1 {
+    background: radial-gradient(circle at 30% 30%, #ffecb3, #fbc02d 80%);
+}
+.p2 {
+    background: radial-gradient(circle at 30% 30%, #ffb3b3, #e53935 80%);
+}
+.jaune {
+    color: #fbc02d;
+    font-weight: bold;
+}
+.rouge {
+    color: #e53935;
+    font-weight: bold;
+}
+.violet {
+    color: #8e24aa;
+    font-weight: bold;
+}
+.vert {
+    color: #43a047;
+    font-weight: bold;
+}
+.violet {
+    background: radial-gradient(circle at 30% 30%, #e1b3ff, #8e24aa 80%);
+    color: #8e24aa;
+}
+.vert {
+    background: radial-gradient(circle at 30% 30%, #b3ffd1, #43a047 80%);
+    color: #43a047;
+}
+.violet.jaune, .violet.rouge, .violet.vert, .violet.violet {
+    color: #8e24aa !important;
+}
+.vert.jaune, .vert.rouge, .vert.vert, .vert.violet {
+    color: #43a047 !important;
+}
 /* Modal Règles Puissance 4 */
 .modal {
     display: none;
@@ -104,11 +140,13 @@
     margin: auto;
     box-shadow: 0 2px 8px rgba(0,0,0,0.10);
 }
-.player1 {
-    background: radial-gradient(circle at 30% 30%, #ffecb3, #fbc02d 80%);
+.jaune {
+    color: #fbc02d;
+    font-weight: bold;
 }
-.player2 {
-    background: radial-gradient(circle at 30% 30%, #ffb3b3, #e53935 80%);
+.rouge {
+    color: #e53935;
+    font-weight: bold;
 }
 body {
     font-family: 'Poppins', Arial, sans-serif;
@@ -202,7 +240,7 @@ a.button:hover, button.button:hover {
     background: radial-gradient(circle at 30% 30%, #ffecb3, #fbc02d 80%);
 }
 .p2 {
-    background: radial-gradient(circle at 30% 30%, #b3e5fc, #0288d1 80%);
+    background: radial-gradient(circle at 30% 30%, #ffb3b3, #e53935 80%);
 }
 
 #message {

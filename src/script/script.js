@@ -7,6 +7,9 @@ let winner = 0;
 
 const message = document.getElementById('message');
 
+
+
+
 async function fetchBoard() {
   const res = await fetch("/api/board");
   const state = await res.json();
@@ -62,7 +65,7 @@ function renderBoard(state) {
 
       if (cell !== 0) {
         const token = document.createElement("div");
-        token.classList.add("token", cell === 1 ? "player1" : "player2");
+        token.classList.add("token", cell === 1 ? "p1" : "p2");
         // Animation de chute si c'est le dernier pion joué
         if (lastMove && lastMove.row === r && lastMove.col === c) {
           token.classList.add("fall-real");
@@ -84,6 +87,7 @@ function renderBoard(state) {
   // Sauvegarde du plateau pour la prochaine animation
   window.oldBoard = state.board.map(row => row.slice());
 }
+
 
 function updateMessage(state) {
   if (state.winner === 1) {
