@@ -1,3 +1,15 @@
+.win-token {
+    box-shadow: 0 0 18px 6px #fff176, 0 0 0 3px #fffde7;
+    border: 3px solid #fffde7;
+    z-index: 2;
+    position: relative;
+    animation: win-glow 0.7s infinite alternate;
+}
+
+@keyframes win-glow {
+    from { box-shadow: 0 0 18px 6px #fff176, 0 0 0 3px #fffde7; }
+    to   { box-shadow: 0 0 32px 12px #fffde7, 0 0 0 3px #fffde7; }
+}
 .jaune {
     color: #fbc02d;
     font-weight: bold;

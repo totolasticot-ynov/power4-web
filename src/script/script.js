@@ -36,6 +36,9 @@ function renderBoard(state) {
   currentPlayer = state.currentPlayer;
   winner = state.winner;
 
+  // Prépare la liste des cases gagnantes (pour surbrillance)
+  const winCells = Array.isArray(state.winCells) ? state.winCells.map(([r, c]) => `${r},${c}`) : [];
+
   // Trouver la dernière case jouée (pour l'animation)
   if (lastMove && state.board[lastMove.row][lastMove.col] === 0) {
     lastMove = null;
@@ -62,10 +65,13 @@ function renderBoard(state) {
         token.classList.add("token", cell === 1 ? "player1" : "player2");
         // Animation de chute si c'est le dernier pion joué
         if (lastMove && lastMove.row === r && lastMove.col === c) {
-          // Animation de chute réaliste : durée et distance selon la ligne
           token.classList.add("fall-real");
-          token.style.setProperty('--fall-dist', `${(r) * 68}px`); // 60px cell + 8px gap
+          token.style.setProperty('--fall-dist', `${(r) * 68}px`);
           token.style.setProperty('--fall-dur', `${0.12 + r*0.07}s`);
+        }
+        // Highlight si fait partie de la ligne gagnante
+        if (winCells.includes(`${r},${c}`)) {
+          token.classList.add("win-token");
         }
         cellEl.appendChild(token);
       } else {
