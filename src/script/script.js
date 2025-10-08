@@ -57,9 +57,9 @@ function updateMessage(state) {
   if (state.winner === 1) {
     message.textContent = 'Joueur 1 (jaune) a gagné !';
   } else if (state.winner === 2) {
-    message.textContent = 'Joueur 2 (bleu) a gagné !';
+    message.textContent = 'Joueur 2 (rouge) a gagné !';
   } else {
-    message.textContent = `À ${state.currentPlayer === 1 ? 'jaune' : 'bleu'} de jouer.`;
+    message.textContent = `À ${state.currentPlayer === 1 ? 'jaune' : 'rouge'} de jouer.`;
   }
 }
 
