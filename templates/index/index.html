@@ -6,13 +6,78 @@
     <link rel="stylesheet" href="/assets/style/style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Puissance 4</h1>
+    <div id="difficultyModal" class="modal" style="display:flex;align-items:center;justify-content:center;">
+        <div class="modal-content" style="max-width:350px;">
+            <h2>Choisissez la difficulté</h2>
+            <form id="difficultyForm">
+                <button type="submit" class="button" data-rows="6" data-cols="7" data-win="3">Easy<br><span style="font-size:0.9em;">6x7, 3 pions alignés</span></button>
+                <button type="submit" class="button" data-rows="6" data-cols="9" data-win="5">Normal<br><span style="font-size:0.9em;">6x9, 5 pions alignés</span></button>
+                <button type="submit" class="button" data-rows="7" data-cols="8" data-win="7">Hard<br><span style="font-size:0.9em;">7x8, 7 pions alignés</span></button>
+            </form>
+        </div>
+    </div>
+    <div class="container" id="gameContainer" style="display:none;">
+    <h1 id="gameTitle">Puissance 4</h1>
         <p id="message">Chargement...</p>
         <div id="board"></div>
         <button id="resetBtn" class="button">Recommencer</button>
-        <a href="/" class="button">🏠 Retour menu</a>
+        <a href="/" class="button" id="backMenuBtn">🏠 Retour menu</a>
     </div>
+    <script>
+    // Difficulté : modale au démarrage
+    document.getElementById('difficultyForm').onclick = async function(e) {
+        if (e.target.closest('button')) {
+            e.preventDefault();
+            const btn = e.target.closest('button');
+            const rows = btn.getAttribute('data-rows');
+            const cols = btn.getAttribute('data-cols');
+            const win = btn.getAttribute('data-win');
+            localStorage.setItem('p4_rows', rows);
+            localStorage.setItem('p4_cols', cols);
+            localStorage.setItem('p4_win', win);
+            // Reset complet du backend pour appliquer la nouvelle config
+            await fetch('/api/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rows, cols, win })
+            });
+            await fetch('/api/reset', { method: 'POST' });
+            document.getElementById('difficultyModal').style.display = 'none';
+            document.getElementById('gameContainer').style.display = '';
+            window.location.reload();
+        }
+    };
+    // Pour éviter l'affichage du jeu avant le choix
+    if (!localStorage.getItem('p4_rows') || !localStorage.getItem('p4_cols') || !localStorage.getItem('p4_win')) {
+        document.getElementById('difficultyModal').style.display = 'flex';
+        document.getElementById('gameContainer').style.display = 'none';
+    } else {
+        document.getElementById('difficultyModal').style.display = 'none';
+        document.getElementById('gameContainer').style.display = '';
+    }
+    // Bouton retour menu : reset + retour + suppression config difficulté
+    document.getElementById('backMenuBtn').addEventListener('click', function(e) {
+        e.preventDefault();
+        localStorage.removeItem('p4_rows');
+        localStorage.removeItem('p4_cols');
+        localStorage.removeItem('p4_win');
+        fetch('/api/reset', { method: 'POST' }).then(() => {
+            window.location.href = '/';
+        });
+    });
+    </script>
+    <script>
+    // Met à jour dynamiquement le titre selon la difficulté
+    function updateTitleByDifficulty() {
+        const win = localStorage.getItem('p4_win');
+        let titre = 'Puissance 4';
+        if (win === '3') titre = 'Puissance 3';
+        else if (win === '5') titre = 'Puissance 5';
+        else if (win === '7') titre = 'Puissance 7';
+        document.getElementById('gameTitle').textContent = titre;
+    }
+    updateTitleByDifficulty();
+    </script>
     <script src="/src/script/script.js"></script>
 </body>
 </html>

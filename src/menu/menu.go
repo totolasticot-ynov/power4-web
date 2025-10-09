@@ -15,7 +15,7 @@ type GameState struct {
 }
 
 var (
-    rows, cols = 6, 7
+    rows, cols, winLen = 6, 7, 3
     state      = GameState{
         Board:         make([][]int, 6),
         CurrentPlayer: 1,
@@ -31,6 +31,26 @@ func init() {
 }
 
 func Menu() error {
+    // API: configurer la taille et la difficulté
+    http.HandleFunc("/api/config", func(w http.ResponseWriter, r *http.Request) {
+        var req struct {
+            Rows int `json:"rows"`
+            Cols int `json:"cols"`
+            Win  int `json:"win"`
+        }
+        _ = json.NewDecoder(r.Body).Decode(&req)
+        if req.Rows > 0 && req.Cols > 0 && req.Win > 0 {
+            rows, cols, winLen = req.Rows, req.Cols, req.Win
+            state.Board = make([][]int, rows)
+            for i := range state.Board {
+                state.Board[i] = make([]int, cols)
+            }
+            state.CurrentPlayer = 1
+            state.Winner = 0
+            state.WinCells = nil
+        }
+        w.WriteHeader(http.StatusOK)
+    })
     // Handlers statiques
     http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("assets"))))
     http.Handle("/src/", http.StripPrefix("/src/", http.FileServer(http.Dir("src"))))
@@ -99,20 +119,72 @@ func checkWinner(board [][]int) (int, [][2]int) {
                 continue
             }
             // Horizontal
-            if c+3 < cols && player == board[r][c+1] && player == board[r][c+2] && player == board[r][c+3] {
-                return player, [][2]int{{r, c}, {r, c+1}, {r, c+2}, {r, c+3}}
+            if c+winLen-1 < cols {
+                win := true
+                for k := 1; k < winLen; k++ {
+                    if board[r][c+k] != player {
+                        win = false
+                        break
+                    }
+                }
+                if win {
+                    cells := make([][2]int, winLen)
+                    for k := 0; k < winLen; k++ {
+                        cells[k] = [2]int{r, c + k}
+                    }
+                    return player, cells
+                }
             }
             // Vertical
-            if r+3 < rows && player == board[r+1][c] && player == board[r+2][c] && player == board[r+3][c] {
-                return player, [][2]int{{r, c}, {r+1, c}, {r+2, c}, {r+3, c}}
+            if r+winLen-1 < rows {
+                win := true
+                for k := 1; k < winLen; k++ {
+                    if board[r+k][c] != player {
+                        win = false
+                        break
+                    }
+                }
+                if win {
+                    cells := make([][2]int, winLen)
+                    for k := 0; k < winLen; k++ {
+                        cells[k] = [2]int{r + k, c}
+                    }
+                    return player, cells
+                }
             }
             // Diagonal droite
-            if r+3 < rows && c+3 < cols && player == board[r+1][c+1] && player == board[r+2][c+2] && player == board[r+3][c+3] {
-                return player, [][2]int{{r, c}, {r+1, c+1}, {r+2, c+2}, {r+3, c+3}}
+            if r+winLen-1 < rows && c+winLen-1 < cols {
+                win := true
+                for k := 1; k < winLen; k++ {
+                    if board[r+k][c+k] != player {
+                        win = false
+                        break
+                    }
+                }
+                if win {
+                    cells := make([][2]int, winLen)
+                    for k := 0; k < winLen; k++ {
+                        cells[k] = [2]int{r + k, c + k}
+                    }
+                    return player, cells
+                }
             }
             // Diagonal gauche
-            if r+3 < rows && c-3 >= 0 && player == board[r+1][c-1] && player == board[r+2][c-2] && player == board[r+3][c-3] {
-                return player, [][2]int{{r, c}, {r+1, c-1}, {r+2, c-2}, {r+3, c-3}}
+            if r+winLen-1 < rows && c-winLen+1 >= 0 {
+                win := true
+                for k := 1; k < winLen; k++ {
+                    if board[r+k][c-k] != player {
+                        win = false
+                        break
+                    }
+                }
+                if win {
+                    cells := make([][2]int, winLen)
+                    for k := 0; k < winLen; k++ {
+                        cells[k] = [2]int{r + k, c - k}
+                    }
+                    return player, cells
+                }
             }
         }
     }

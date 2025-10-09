@@ -1,14 +1,24 @@
 
+
 const boardEl = document.getElementById("board");
 const resetBtn = document.getElementById("resetBtn");
 let currentPlayer = 1;
 let winner = 0;
-
-
 const message = document.getElementById('message');
 
+// Récupère la config stockée (localStorage)
+let p4_rows = parseInt(localStorage.getItem('p4_rows') || '6');
+let p4_cols = parseInt(localStorage.getItem('p4_cols') || '7');
+let p4_win = parseInt(localStorage.getItem('p4_win') || '3');
 
-
+// Envoie la config au backend si besoin
+async function sendConfig() {
+  await fetch('/api/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rows: p4_rows, cols: p4_cols, win: p4_win })
+  });
+}
 
 async function fetchBoard() {
   const res = await fetch("/api/board");
@@ -22,7 +32,7 @@ async function play(col) {
   await fetch("/api/play", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ column: col }), // clé en minuscule !
+    body: JSON.stringify({ column: col }),
   });
   fetchBoard();
 }
@@ -57,8 +67,10 @@ function renderBoard(state) {
     }
   }
 
-  state.board.forEach((row, r) => {
-    row.forEach((cell, c) => {
+  // Affichage dynamique selon la config
+  for (let r = 0; r < p4_rows; r++) {
+    for (let c = 0; c < p4_cols; c++) {
+      const cell = (state.board[r] || [])[c] || 0;
       const cellEl = document.createElement("div");
       cellEl.classList.add("cell");
       cellEl.addEventListener("click", () => play(c));
@@ -66,13 +78,11 @@ function renderBoard(state) {
       if (cell !== 0) {
         const token = document.createElement("div");
         token.classList.add("token", cell === 1 ? "p1" : "p2");
-        // Animation de chute si c'est le dernier pion joué
         if (lastMove && lastMove.row === r && lastMove.col === c) {
           token.classList.add("fall-real");
           token.style.setProperty('--fall-dist', `${(r) * 68}px`);
           token.style.setProperty('--fall-dur', `${0.12 + r*0.07}s`);
         }
-        // Highlight si fait partie de la ligne gagnante
         if (winCells.includes(`${r},${c}`)) {
           token.classList.add("win-token");
         }
@@ -80,14 +90,14 @@ function renderBoard(state) {
       } else {
         cellEl.style.opacity = '0.5';
       }
-
       boardEl.appendChild(cellEl);
-    });
-  });
-  // Sauvegarde du plateau pour la prochaine animation
+    }
+  }
+  // CSS grid dynamique
+  boardEl.style.gridTemplateColumns = `repeat(${p4_cols}, 1fr)`;
+  boardEl.style.gridTemplateRows = `repeat(${p4_rows}, 1fr)`;
   window.oldBoard = state.board.map(row => row.slice());
 }
-
 
 function updateMessage(state) {
   if (state.winner === 1) {
@@ -102,5 +112,6 @@ function updateMessage(state) {
 
 if (resetBtn) resetBtn.onclick = resetGame;
 
-fetchBoard();
+// Envoie la config au backend puis charge le plateau
+sendConfig().then(fetchBoard);
 
