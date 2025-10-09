@@ -29,9 +29,10 @@ async function fetchBoard() {
 
 async function play(col) {
   if (winner !== 0) return;
+  const mode = localStorage.getItem('p4_mode') || 'multi';
   await fetch("/api/play", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "X-P4-Mode": mode },
     body: JSON.stringify({ column: col }),
   });
   fetchBoard();

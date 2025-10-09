@@ -5,6 +5,7 @@ import (
     "html/template"
     "log"
     "net/http"
+    "math/rand"
 )
 
 type GameState struct {
@@ -72,6 +73,7 @@ func Menu() error {
         var req struct{ Column int }
         _ = json.NewDecoder(r.Body).Decode(&req)
         col := req.Column
+        // Place le pion du joueur humain
         for r := rows - 1; r >= 0; r-- {
             if state.Board[r][col] == 0 {
                 state.Board[r][col] = state.CurrentPlayer
@@ -80,6 +82,28 @@ func Menu() error {
             }
         }
         state.Winner, state.WinCells = checkWinner(state.Board)
+        // Si mode solo et pas de gagnant, le bot joue
+        mode := r.Header.Get("X-P4-Mode")
+        if mode == "solo" && state.Winner == 0 && state.CurrentPlayer == 2 {
+            // Bot = joue un coup aléatoire valide
+            validCols := []int{}
+            for c := 0; c < cols; c++ {
+                if state.Board[0][c] == 0 {
+                    validCols = append(validCols, c)
+                }
+            }
+            if len(validCols) > 0 {
+                botCol := validCols[rand.Intn(len(validCols))]
+                for r := rows - 1; r >= 0; r-- {
+                    if state.Board[r][botCol] == 0 {
+                        state.Board[r][botCol] = 2
+                        state.CurrentPlayer = 1
+                        break
+                    }
+                }
+                state.Winner, state.WinCells = checkWinner(state.Board)
+            }
+        }
         w.Header().Set("Content-Type", "application/json")
         _ = json.NewEncoder(w).Encode(state)
     })
@@ -98,7 +122,7 @@ func Menu() error {
 
     // Page de login
     http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
-        renderTemplate(w, "templates/login.html", nil)
+        renderTemplate(w, "templates/login/login.html", nil)
     })
     // Page d'accueil (menu)
     http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

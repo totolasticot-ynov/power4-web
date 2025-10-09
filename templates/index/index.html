@@ -16,6 +16,13 @@
             </form>
         </div>
     </div>
+    <div id="modeModal" class="modal" style="display:none;align-items:center;justify-content:center;">
+        <div class="modal-content" style="max-width:350px;">
+            <h2>Mode de jeu</h2>
+            <button class="button" id="soloBtn">Solo (vs Bot)</button>
+            <button class="button" id="multiBtn">Multijoueur</button>
+        </div>
+    </div>
     <div class="container" id="gameContainer" style="display:none;">
         <h1 id="gameTitle">Puissance 4</h1>
         
@@ -43,17 +50,36 @@
                 body: JSON.stringify({ rows, cols, win })
             });
             await fetch('/api/reset', { method: 'POST' });
+            // Affiche la modale de choix du mode
             document.getElementById('difficultyModal').style.display = 'none';
-            document.getElementById('gameContainer').style.display = '';
-            window.location.reload();
+            document.getElementById('modeModal').style.display = 'flex';
         }
+    };
+    // Choix du mode de jeu
+    document.getElementById('soloBtn').onclick = function() {
+        localStorage.setItem('p4_mode', 'solo');
+        document.getElementById('modeModal').style.display = 'none';
+        document.getElementById('gameContainer').style.display = '';
+        window.location.reload();
+    };
+    document.getElementById('multiBtn').onclick = function() {
+        localStorage.setItem('p4_mode', 'multi');
+        document.getElementById('modeModal').style.display = 'none';
+        document.getElementById('gameContainer').style.display = '';
+        window.location.reload();
     };
     // Pour éviter l'affichage du jeu avant le choix
     if (!localStorage.getItem('p4_rows') || !localStorage.getItem('p4_cols') || !localStorage.getItem('p4_win')) {
         document.getElementById('difficultyModal').style.display = 'flex';
         document.getElementById('gameContainer').style.display = 'none';
+        document.getElementById('modeModal').style.display = 'none';
+    } else if (!localStorage.getItem('p4_mode')) {
+        document.getElementById('difficultyModal').style.display = 'none';
+        document.getElementById('modeModal').style.display = 'flex';
+        document.getElementById('gameContainer').style.display = 'none';
     } else {
         document.getElementById('difficultyModal').style.display = 'none';
+        document.getElementById('modeModal').style.display = 'none';
         document.getElementById('gameContainer').style.display = '';
     }
     // Bouton retour menu : reset + retour + suppression config difficulté
