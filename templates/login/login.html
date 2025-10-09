@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Connexion</title>
+    <link rel="stylesheet" href="/assets/style/style.css">
+    <style>
+    .login-container {
+        background: rgba(255,255,255,0.10);
+        border-radius: 16px;
+        padding: 40px 32px 32px 32px;
+        box-shadow: 0 8px 32px 0 rgba(31,38,135,0.37);
+        text-align: center;
+        max-width: 350px;
+        margin: 80px auto;
+    }
+    .login-tabs {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 18px;
+    }
+    .login-tab {
+        flex: 1;
+        padding: 10px 0;
+        cursor: pointer;
+        font-weight: 600;
+        background: #fff;
+        color: #5563DE;
+        border: none;
+        border-radius: 8px 8px 0 0;
+        margin: 0 2px;
+        transition: background 0.2s, color 0.2s;
+    }
+    .login-tab.active {
+        background: #5563DE;
+        color: #fff;
+    }
+    .login-form input {
+        width: 90%;
+        padding: 10px;
+        margin: 10px 0 18px 0;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        font-size: 1rem;
+    }
+    .login-form button {
+        width: 100%;
+    }
+    </style>
+</head>
+<body class="menu-bg">
+    <div class="login-container">
+        <div class="login-tabs">
+            <button class="login-tab active" id="tab-login">Connexion</button>
+            <button class="login-tab" id="tab-register">Créer un compte</button>
+        </div>
+        <form class="login-form" id="loginForm">
+            <input type="text" id="loginUser" placeholder="Nom d'utilisateur" required autocomplete="username">
+            <input type="password" id="loginPass" placeholder="Mot de passe" required autocomplete="current-password">
+            <button type="submit" class="button">Se connecter</button>
+        </form>
+        <form class="login-form" id="registerForm" style="display:none;">
+            <input type="text" id="registerUser" placeholder="Nom d'utilisateur" required autocomplete="username">
+            <input type="password" id="registerPass" placeholder="Mot de passe" required autocomplete="new-password">
+            <button type="submit" class="button">Créer un compte</button>
+        </form>
+    </div>
+    <script>
+    // Tabs
+    document.getElementById('tab-login').onclick = function() {
+        this.classList.add('active');
+        document.getElementById('tab-register').classList.remove('active');
+        document.getElementById('loginForm').style.display = '';
+        document.getElementById('registerForm').style.display = 'none';
+    };
+    document.getElementById('tab-register').onclick = function() {
+        this.classList.add('active');
+        document.getElementById('tab-login').classList.remove('active');
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('registerForm').style.display = '';
+    };
+    // Fake login/register
+    function handleAuth(formId, userId) {
+        document.getElementById(formId).onsubmit = function(e) {
+            e.preventDefault();
+            const user = document.getElementById(userId).value || 'Utilisateur';
+            localStorage.setItem('p4_user', user);
+            window.location.href = '/';
+        };
+    }
+    handleAuth('loginForm', 'loginUser');
+    handleAuth('registerForm', 'registerUser');
+    // Si déjà connecté, skip
+    if (localStorage.getItem('p4_user')) {
+        window.location.href = '/';
+    }
+    </script>
+</body>
+</html>
