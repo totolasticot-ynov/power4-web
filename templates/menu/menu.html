@@ -7,6 +7,12 @@
     <link rel="stylesheet" href="/assets/style/style.css">
 </head>
 <body class="menu-bg">
+    <div style="position:fixed;top:24px;left:24px;z-index:102;">
+        <button id="accountBtn" class="button" style="min-width:120px;"></button>
+        <div id="accountMenu" style="display:none;position:absolute;top:48px;left:0;background:#fff;color:#222;border-radius:8px;box-shadow:0 2px 8px rgba(85,99,222,0.18);min-width:140px;overflow:hidden;">
+            <button id="logoutBtn" style="width:100%;padding:12px 0;border:none;background:none;cursor:pointer;font-weight:600;">Déconnexion</button>
+        </div>
+    </div>
     <div class="menu-container">
         <h1>Bienvenue sur mon serveur Go 🚀</h1>
         <h2>Jouez au Puissance 4 contre un ami !</h2>
@@ -29,13 +35,35 @@
                 <li>Le jeu se joue à deux joueurs, chacun leur tour.</li>
                 <li>À chaque tour, un joueur place un pion de sa couleur dans une colonne.</li>
                 <li>Le pion tombe jusqu'à la première case libre de la colonne.</li>
-                <li>Le but est d'aligner 4 pions de sa couleur horizontalement, verticalement ou en diagonale.</li>
-                <li>Le premier à aligner 4 pions gagne la partie.</li>
+                <li>Le but est d'aligner un certain nombre de pions de sa couleur horizontalement, verticalement ou en diagonale.</li>
+                <li>Le premier à aligner le nombre de pions requis gagne la partie.</li>
                 <li>Si la grille est pleine sans gagnant, la partie est nulle.</li>
             </ul>
         </div>
     </div>
     <script>
+    // Redirection login si pas connecté
+    if (!localStorage.getItem('p4_user')) {
+        window.location.href = '/login';
+    }
+    // Affiche le nom utilisateur sur le bouton compte
+    const user = localStorage.getItem('p4_user') || 'Compte';
+    document.getElementById('accountBtn').textContent = '👤 ' + user;
+    // Menu déroulant compte
+    const accountBtn = document.getElementById('accountBtn');
+    const accountMenu = document.getElementById('accountMenu');
+    accountBtn.onclick = function(e) {
+        e.stopPropagation();
+        accountMenu.style.display = accountMenu.style.display === 'block' ? 'none' : 'block';
+    };
+    document.getElementById('logoutBtn').onclick = function() {
+        localStorage.removeItem('p4_user');
+        window.location.href = '/login';
+    };
+    // Ferme le menu si clic ailleurs
+    window.addEventListener('click', function(e) {
+        if (accountMenu.style.display === 'block') accountMenu.style.display = 'none';
+    });
     document.getElementById('rulesBtn').onclick = function() {
         document.getElementById('rulesModal').style.display = 'block';
     };

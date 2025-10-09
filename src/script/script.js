@@ -44,6 +44,7 @@ async function resetGame() {
 
 let lastMove = null;
 
+
 function renderBoard(state) {
   boardEl.innerHTML = "";
   currentPlayer = state.currentPlayer;
@@ -78,6 +79,7 @@ function renderBoard(state) {
       if (cell !== 0) {
         const token = document.createElement("div");
         token.classList.add("token", cell === 1 ? "p1" : "p2");
+        // Animation de chute classique
         if (lastMove && lastMove.row === r && lastMove.col === c) {
           token.classList.add("fall-real");
           token.style.setProperty('--fall-dist', `${(r) * 68}px`);
@@ -104,10 +106,21 @@ function updateMessage(state) {
     message.innerHTML = 'Joueur 1 (<span class="jaune">jaune</span>) a gagné !';
   } else if (state.winner === 2) {
     message.innerHTML = 'Joueur 2 (<span class="rouge">rouge</span>) a gagné !';
+  } else if (isDraw(state.board)) {
+    message.innerHTML = '<span style="color:#5563DE;font-weight:bold;">Match nul&nbsp;!</span>';
   } else {
     const color = state.currentPlayer === 1 ? '<span class="jaune">jaune</span>' : '<span class="rouge">rouge</span>';
     message.innerHTML = `À ${color} de jouer.`;
   }
+}
+
+function isDraw(board) {
+  for (let r = 0; r < board.length; r++) {
+    for (let c = 0; c < board[r].length; c++) {
+      if (board[r][c] === 0) return false;
+    }
+  }
+  return true;
 }
 
 if (resetBtn) resetBtn.onclick = resetGame;
