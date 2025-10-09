@@ -96,6 +96,10 @@ func Menu() error {
 		w.WriteHeader(http.StatusOK)
 	})
 
+	// Page de login
+	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		renderTemplate(w, "templates/login.html", nil)
+	})
 	// Page d'accueil (menu)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		renderTemplate(w, "templates/menu/menu.html", nil)
