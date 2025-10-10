@@ -31,6 +31,23 @@ func init() {
     }
 }
 
+
+// Helpers pour le bot (doivent être à la fin du fichier)
+func getRowForCol(board [][]int, col int) int {
+    for r := rows - 1; r >= 0; r-- {
+        if board[r][col] == 0 {
+            return r
+        }
+    }
+    return -1
+}
+
+func playBotMove(state *GameState, row, col int) {
+    state.Board[row][col] = 2
+    state.CurrentPlayer = 1
+}
+
+
 func Menu() error {
     // API: configurer la taille et la difficulté
     http.HandleFunc("/api/config", func(w http.ResponseWriter, r *http.Request) {
@@ -85,25 +102,51 @@ func Menu() error {
         // Si mode solo et pas de gagnant, le bot joue
         mode := r.Header.Get("X-P4-Mode")
         if mode == "solo" && state.Winner == 0 && state.CurrentPlayer == 2 {
-            // Bot = joue un coup aléatoire valide
+            // Bot amélioré : gagne si possible, sinon bloque, sinon aléatoire
             validCols := []int{}
             for c := 0; c < cols; c++ {
                 if state.Board[0][c] == 0 {
                     validCols = append(validCols, c)
                 }
             }
+            // Essaie de gagner
+            for _, c := range validCols {
+                row := getRowForCol(state.Board, c)
+                if row == -1 { continue }
+                state.Board[row][c] = 2
+                win, _ := checkWinner(state.Board)
+                state.Board[row][c] = 0
+                if win == 2 {
+                    playBotMove(&state, row, c)
+                    goto botEnd
+                }
+            }
+            // Bloque l'adversaire
+            for _, c := range validCols {
+                row := getRowForCol(state.Board, c)
+                if row == -1 { continue }
+                state.Board[row][c] = 1
+                win, _ := checkWinner(state.Board)
+                state.Board[row][c] = 0
+                if win == 1 {
+                    playBotMove(&state, row, c)
+                    goto botEnd
+                }
+            }
+            // Sinon aléatoire
             if len(validCols) > 0 {
                 botCol := validCols[rand.Intn(len(validCols))]
-                for r := rows - 1; r >= 0; r-- {
-                    if state.Board[r][botCol] == 0 {
-                        state.Board[r][botCol] = 2
-                        state.CurrentPlayer = 1
-                        break
-                    }
+                row := getRowForCol(state.Board, botCol)
+                if row != -1 {
+                    playBotMove(&state, row, botCol)
                 }
-                state.Winner, state.WinCells = checkWinner(state.Board)
             }
+        botEnd:
+            state.Winner, state.WinCells = checkWinner(state.Board)
         }
+
+// Helpers pour le bot (à placer hors de Menu)
+
         w.Header().Set("Content-Type", "application/json")
         _ = json.NewEncoder(w).Encode(state)
     })
