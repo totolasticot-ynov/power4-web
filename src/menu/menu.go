@@ -109,7 +109,7 @@ func Menu() error {
                     validCols = append(validCols, c)
                 }
             }
-            // Essaie de gagner
+            // 1. Essaie de gagner
             for _, c := range validCols {
                 row := getRowForCol(state.Board, c)
                 if row == -1 { continue }
@@ -118,10 +118,11 @@ func Menu() error {
                 state.Board[row][c] = 0
                 if win == 2 {
                     playBotMove(&state, row, c)
+                    state.Winner, state.WinCells = checkWinner(state.Board)
                     goto botEnd
                 }
             }
-            // Bloque l'adversaire
+            // 2. Bloque l'adversaire
             for _, c := range validCols {
                 row := getRowForCol(state.Board, c)
                 if row == -1 { continue }
@@ -130,10 +131,11 @@ func Menu() error {
                 state.Board[row][c] = 0
                 if win == 1 {
                     playBotMove(&state, row, c)
+                    state.Winner, state.WinCells = checkWinner(state.Board)
                     goto botEnd
                 }
             }
-            // Sinon aléatoire
+            // 3. Sinon aléatoire
             if len(validCols) > 0 {
                 botCol := validCols[rand.Intn(len(validCols))]
                 row := getRowForCol(state.Board, botCol)
@@ -141,8 +143,8 @@ func Menu() error {
                     playBotMove(&state, row, botCol)
                 }
             }
-        botEnd:
             state.Winner, state.WinCells = checkWinner(state.Board)
+        botEnd:
         }
 
 // Helpers pour le bot (à placer hors de Menu)
