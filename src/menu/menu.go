@@ -1,84 +1,82 @@
 package menu
 
 import (
-    "encoding/json"
-    "html/template"
-    "log"
-    "net/http"
-    "math/rand"
+	"encoding/json"
+	"html/template"
+	"log"
+	"math/rand"
+	"net/http"
 )
 
 type GameState struct {
-    Board         [][]int     `json:"board"`
-    CurrentPlayer int         `json:"currentPlayer"`
-    Winner        int         `json:"winner"`
-    WinCells      [][2]int    `json:"winCells"`
+	Board         [][]int  `json:"board"`
+	CurrentPlayer int      `json:"currentPlayer"`
+	Winner        int      `json:"winner"`
+	WinCells      [][2]int `json:"winCells"`
 }
 
 var (
-    rows, cols, winLen = 6, 7, 3
-    state      = GameState{
-        Board:         make([][]int, 6),
-        CurrentPlayer: 1,
-        Winner:        0,
-        WinCells:      nil,
-    }
+	rows, cols, winLen = 6, 7, 3
+	state              = GameState{
+		Board:         make([][]int, 6),
+		CurrentPlayer: 1,
+		Winner:        0,
+		WinCells:      nil,
+	}
 )
 
 func init() {
-    for i := range state.Board {
-        state.Board[i] = make([]int, cols)
-    }
+	for i := range state.Board {
+		state.Board[i] = make([]int, cols)
+	}
 }
-
 
 // Helpers pour le bot (doivent être à la fin du fichier)
 func getRowForCol(board [][]int, col int) int {
-    for r := rows - 1; r >= 0; r-- {
-        if board[r][col] == 0 {
-            return r
-        }
-    }
-    return -1
+	for r := rows - 1; r >= 0; r-- {
+		if board[r][col] == 0 {
+			return r
+		}
+	}
+	return -1
 }
 
 func playBotMove(state *GameState, row, col int) {
-    state.Board[row][col] = 2
-    state.CurrentPlayer = 1
+	state.Board[row][col] = 2
+	state.CurrentPlayer = 1
 }
 
-
 func Menu() error {
-    // API: configurer la taille et la difficulté
-    http.HandleFunc("/api/config", func(w http.ResponseWriter, r *http.Request) {
-        var req struct {
-            Rows int `json:"rows"`
-            Cols int `json:"cols"`
-            Win  int `json:"win"`
-        }
-        _ = json.NewDecoder(r.Body).Decode(&req)
-        if req.Rows > 0 && req.Cols > 0 && req.Win > 0 {
-            rows, cols, winLen = req.Rows, req.Cols, req.Win
-            state.Board = make([][]int, rows)
-            for i := range state.Board {
-                state.Board[i] = make([]int, cols)
-            }
-            state.CurrentPlayer = 1
-            state.Winner = 0
-            state.WinCells = nil
-        }
-        w.WriteHeader(http.StatusOK)
-    })
-    // Handlers statiques
-    http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("assets"))))
-    http.Handle("/src/", http.StripPrefix("/src/", http.FileServer(http.Dir("src"))))
+	// API: configurer la taille et la difficulté
+	http.HandleFunc("/api/config", func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Rows int `json:"rows"`
+			Cols int `json:"cols"`
+			Win  int `json:"win"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		if req.Rows > 0 && req.Cols > 0 && req.Win > 0 {
+			rows, cols, winLen = req.Rows, req.Cols, req.Win
+			state.Board = make([][]int, rows)
+			for i := range state.Board {
+				state.Board[i] = make([]int, cols)
+			}
+			state.CurrentPlayer = 1
+			state.Winner = 0
+			state.WinCells = nil
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+	// Handlers statiques
+	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("assets"))))
+	http.Handle("/src/", http.StripPrefix("/src/", http.FileServer(http.Dir("src"))))
 
-    // API: état du jeu
-    http.HandleFunc("/api/board", func(w http.ResponseWriter, r *http.Request) {
-        state.Winner, state.WinCells = checkWinner(state.Board)
-        w.Header().Set("Content-Type", "application/json")
-        _ = json.NewEncoder(w).Encode(state)
-    })
+	// API: état du jeu
+	http.HandleFunc("/api/board", func(w http.ResponseWriter, r *http.Request) {
+		state.Winner, state.WinCells = checkWinner(state.Board)
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(state)
+	})
 
     // API: jouer un coup
     http.HandleFunc("/api/play", func(w http.ResponseWriter, r *http.Request) {
@@ -109,7 +107,7 @@ func Menu() error {
                     validCols = append(validCols, c)
                 }
             }
-            // 1. Essaie de gagner
+            // Essaie de gagner
             for _, c := range validCols {
                 row := getRowForCol(state.Board, c)
                 if row == -1 { continue }
@@ -118,11 +116,10 @@ func Menu() error {
                 state.Board[row][c] = 0
                 if win == 2 {
                     playBotMove(&state, row, c)
-                    state.Winner, state.WinCells = checkWinner(state.Board)
                     goto botEnd
                 }
             }
-            // 2. Bloque l'adversaire
+            // Bloque l'adversaire
             for _, c := range validCols {
                 row := getRowForCol(state.Board, c)
                 if row == -1 { continue }
@@ -131,11 +128,10 @@ func Menu() error {
                 state.Board[row][c] = 0
                 if win == 1 {
                     playBotMove(&state, row, c)
-                    state.Winner, state.WinCells = checkWinner(state.Board)
                     goto botEnd
                 }
             }
-            // 3. Sinon aléatoire
+            // Sinon aléatoire
             if len(validCols) > 0 {
                 botCol := validCols[rand.Intn(len(validCols))]
                 row := getRowForCol(state.Board, botCol)
@@ -143,8 +139,8 @@ func Menu() error {
                     playBotMove(&state, row, botCol)
                 }
             }
-            state.Winner, state.WinCells = checkWinner(state.Board)
         botEnd:
+            state.Winner, state.WinCells = checkWinner(state.Board)
         }
 
 // Helpers pour le bot (à placer hors de Menu)
@@ -153,122 +149,122 @@ func Menu() error {
         _ = json.NewEncoder(w).Encode(state)
     })
 
-    // API: reset
-    http.HandleFunc("/api/reset", func(w http.ResponseWriter, r *http.Request) {
-        for r := range state.Board {
-            for c := range state.Board[r] {
-                state.Board[r][c] = 0
-            }
-        }
-        state.CurrentPlayer = 1
-        state.Winner = 0
-        w.WriteHeader(http.StatusOK)
-    })
+	// API: reset
+	http.HandleFunc("/api/reset", func(w http.ResponseWriter, r *http.Request) {
+		for i := range state.Board {
+			for j := range state.Board[i] {
+				state.Board[i][j] = 0
+			}
+		}
+		state.CurrentPlayer = 1
+		state.Winner = 0
+		w.WriteHeader(http.StatusOK)
+	})
 
-    // Page de login
-    http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
-        renderTemplate(w, "templates/login/login.html", nil)
-    })
-    // Page d'accueil (menu)
-    http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-        renderTemplate(w, "templates/menu/menu.html", nil)
-    })
+	// Page de login
+	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		renderTemplate(w, "templates/login/login.html", nil)
+	})
+	// Page d'accueil (menu)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		renderTemplate(w, "templates/menu/menu.html", nil)
+	})
 
-    // Page du jeu
-    http.HandleFunc("/jeu", func(w http.ResponseWriter, r *http.Request) {
-        renderTemplate(w, "templates/index/index.html", nil)
-    })
+	// Page du jeu
+	http.HandleFunc("/jeu", func(w http.ResponseWriter, r *http.Request) {
+		renderTemplate(w, "templates/index/index.html", nil)
+	})
 
-    log.Println("Serveur démarré sur http://localhost:8080 🚀")
-    return http.ListenAndServe(":8080", nil)
+	log.Println("Serveur démarré sur http://localhost:8080 🚀")
+	return http.ListenAndServe(":8080", nil)
 }
 
 func checkWinner(board [][]int) (int, [][2]int) {
-    // Renvoie (winner, [cases gagnantes])
-    for r := 0; r < rows; r++ {
-        for c := 0; c < cols; c++ {
-            player := board[r][c]
-            if player == 0 {
-                continue
-            }
-            // Horizontal
-            if c+winLen-1 < cols {
-                win := true
-                for k := 1; k < winLen; k++ {
-                    if board[r][c+k] != player {
-                        win = false
-                        break
-                    }
-                }
-                if win {
-                    cells := make([][2]int, winLen)
-                    for k := 0; k < winLen; k++ {
-                        cells[k] = [2]int{r, c + k}
-                    }
-                    return player, cells
-                }
-            }
-            // Vertical
-            if r+winLen-1 < rows {
-                win := true
-                for k := 1; k < winLen; k++ {
-                    if board[r+k][c] != player {
-                        win = false
-                        break
-                    }
-                }
-                if win {
-                    cells := make([][2]int, winLen)
-                    for k := 0; k < winLen; k++ {
-                        cells[k] = [2]int{r + k, c}
-                    }
-                    return player, cells
-                }
-            }
-            // Diagonal droite
-            if r+winLen-1 < rows && c+winLen-1 < cols {
-                win := true
-                for k := 1; k < winLen; k++ {
-                    if board[r+k][c+k] != player {
-                        win = false
-                        break
-                    }
-                }
-                if win {
-                    cells := make([][2]int, winLen)
-                    for k := 0; k < winLen; k++ {
-                        cells[k] = [2]int{r + k, c + k}
-                    }
-                    return player, cells
-                }
-            }
-            // Diagonal gauche
-            if r+winLen-1 < rows && c-winLen+1 >= 0 {
-                win := true
-                for k := 1; k < winLen; k++ {
-                    if board[r+k][c-k] != player {
-                        win = false
-                        break
-                    }
-                }
-                if win {
-                    cells := make([][2]int, winLen)
-                    for k := 0; k < winLen; k++ {
-                        cells[k] = [2]int{r + k, c - k}
-                    }
-                    return player, cells
-                }
-            }
-        }
-    }
-    return 0, nil
+	// Renvoie (winner, [cases gagnantes])
+	for r := 0; r < rows; r++ {
+		for c := 0; c < cols; c++ {
+			player := board[r][c]
+			if player == 0 {
+				continue
+			}
+			// Horizontal
+			if c+winLen-1 < cols {
+				win := true
+				for k := 1; k < winLen; k++ {
+					if board[r][c+k] != player {
+						win = false
+						break
+					}
+				}
+				if win {
+					cells := make([][2]int, winLen)
+					for k := 0; k < winLen; k++ {
+						cells[k] = [2]int{r, c + k}
+					}
+					return player, cells
+				}
+			}
+			// Vertical
+			if r+winLen-1 < rows {
+				win := true
+				for k := 1; k < winLen; k++ {
+					if board[r+k][c] != player {
+						win = false
+						break
+					}
+				}
+				if win {
+					cells := make([][2]int, winLen)
+					for k := 0; k < winLen; k++ {
+						cells[k] = [2]int{r + k, c}
+					}
+					return player, cells
+				}
+			}
+			// Diagonal droite
+			if r+winLen-1 < rows && c+winLen-1 < cols {
+				win := true
+				for k := 1; k < winLen; k++ {
+					if board[r+k][c+k] != player {
+						win = false
+						break
+					}
+				}
+				if win {
+					cells := make([][2]int, winLen)
+					for k := 0; k < winLen; k++ {
+						cells[k] = [2]int{r + k, c + k}
+					}
+					return player, cells
+				}
+			}
+			// Diagonal gauche
+			if r+winLen-1 < rows && c-winLen+1 >= 0 {
+				win := true
+				for k := 1; k < winLen; k++ {
+					if board[r+k][c-k] != player {
+						win = false
+						break
+					}
+				}
+				if win {
+					cells := make([][2]int, winLen)
+					for k := 0; k < winLen; k++ {
+						cells[k] = [2]int{r + k, c - k}
+					}
+					return player, cells
+				}
+			}
+		}
+	}
+	return 0, nil
 }
 
 func renderTemplate(w http.ResponseWriter, path string, data any) {
-    tmpl, err := template.ParseFiles(path)
-    if err != nil {
-        http.Error(w, "Erreur de template", http.StatusInternalServerError)
-        return
-    }
-    _ = tmpl.Execute(w, data)
+	tmpl, err := template.ParseFiles(path)
+	if err != nil {
+		http.Error(w, "Erreur de template", http.StatusInternalServerError)
+		return
+	}
+	_ = tmpl.Execute(w, data)
 }
