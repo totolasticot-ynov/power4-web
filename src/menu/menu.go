@@ -125,7 +125,7 @@ func Menu() error {
 
 	// Page de login
 	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
-		renderTemplate(w, "templates/login.html", nil)
+		renderTemplate(w, "templates/login/login.html", nil)
 	})
 	// Page d'accueil (menu)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
