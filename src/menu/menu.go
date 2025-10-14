@@ -77,9 +77,9 @@ func Menu() error {
 		_ = json.NewDecoder(r.Body).Decode(&req)
 		col := req.Column
 		// Place le pion du joueur humain
-		for row := rows - 1; row >= 0; row-- {
-			if state.Board[row][col] == 0 {
-				state.Board[row][col] = state.CurrentPlayer
+		for r := rows - 1; r >= 0; r-- {
+			if state.Board[r][col] == 0 {
+				state.Board[r][col] = state.CurrentPlayer
 				state.CurrentPlayer = 3 - state.CurrentPlayer
 				break
 			}
@@ -97,11 +97,14 @@ func Menu() error {
 			}
 			if len(validCols) > 0 {
 				botCol := validCols[rand.Intn(len(validCols))]
-				botRow := getRowForCol(state.Board, botCol)
-				if botRow != -1 {
-					playBotMove(&state, botRow, botCol)
-					state.Winner, state.WinCells = checkWinner(state.Board)
+				for r := rows - 1; r >= 0; r-- {
+					if state.Board[r][botCol] == 0 {
+						state.Board[r][botCol] = 2
+						state.CurrentPlayer = 1
+						break
+					}
 				}
+				state.Winner, state.WinCells = checkWinner(state.Board)
 			}
 		}
 		w.Header().Set("Content-Type", "application/json")
