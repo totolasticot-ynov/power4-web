@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"html/template"
 	"log"
+	"math/rand"
 	"net/http"
 )
 
@@ -28,6 +29,21 @@ func init() {
 	for i := range state.Board {
 		state.Board[i] = make([]int, cols)
 	}
+}
+
+// Helpers pour le bot (doivent être à la fin du fichier)
+func getRowForCol(board [][]int, col int) int {
+	for r := rows - 1; r >= 0; r-- {
+		if board[r][col] == 0 {
+			return r
+		}
+	}
+	return -1
+}
+
+func playBotMove(state *GameState, row, col int) {
+	state.Board[row][col] = 2
+	state.CurrentPlayer = 1
 }
 
 func Menu() error {
@@ -72,6 +88,7 @@ func Menu() error {
 		var req struct{ Column int }
 		_ = json.NewDecoder(r.Body).Decode(&req)
 		col := req.Column
+		// Place le pion du joueur humain
 		for r := rows - 1; r >= 0; r-- {
 			if state.Board[r][col] == 0 {
 				state.Board[r][col] = state.CurrentPlayer
@@ -80,6 +97,28 @@ func Menu() error {
 			}
 		}
 		state.Winner, state.WinCells = checkWinner(state.Board)
+		// Si mode solo et pas de gagnant, le bot joue
+		mode := r.Header.Get("X-P4-Mode")
+		if mode == "solo" && state.Winner == 0 && state.CurrentPlayer == 2 {
+			// Bot = joue un coup aléatoire valide
+			validCols := []int{}
+			for c := 0; c < cols; c++ {
+				if state.Board[0][c] == 0 {
+					validCols = append(validCols, c)
+				}
+			}
+			if len(validCols) > 0 {
+				botCol := validCols[rand.Intn(len(validCols))]
+				for r := rows - 1; r >= 0; r-- {
+					if state.Board[r][botCol] == 0 {
+						state.Board[r][botCol] = 2
+						state.CurrentPlayer = 1
+						break
+					}
+				}
+				state.Winner, state.WinCells = checkWinner(state.Board)
+			}
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(state)
 	})
