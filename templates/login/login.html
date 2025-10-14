@@ -64,6 +64,7 @@
             <input type="password" id="registerPass" placeholder="Mot de passe" required autocomplete="new-password">
             <button type="submit" class="button">Créer un compte</button>
         </form>
+        <div id="authError" style="color:red;display:none;margin-top:12px;font-weight:600;"></div>
     </div>
     <script>
     // Tabs
@@ -72,24 +73,75 @@
         document.getElementById('tab-register').classList.remove('active');
         document.getElementById('loginForm').style.display = '';
         document.getElementById('registerForm').style.display = 'none';
+        document.getElementById('authError').style.display = 'none';
     };
     document.getElementById('tab-register').onclick = function() {
         this.classList.add('active');
         document.getElementById('tab-login').classList.remove('active');
         document.getElementById('loginForm').style.display = 'none';
         document.getElementById('registerForm').style.display = '';
+        document.getElementById('authError').style.display = 'none';
     };
-    // Fake login/register
-    function handleAuth(formId, userId) {
-        document.getElementById(formId).onsubmit = function(e) {
-            e.preventDefault();
-            const user = document.getElementById(userId).value || 'Utilisateur';
-            localStorage.setItem('p4_user', user);
-            window.location.href = '/';
-        };
+
+    // Helper to show error in red
+    function showError(msg) {
+        const e = document.getElementById('authError');
+        e.textContent = msg;
+        e.style.display = 'block';
     }
-    handleAuth('loginForm', 'loginUser');
-    handleAuth('registerForm', 'registerUser');
+
+    // Register (AJAX)
+    document.getElementById('registerForm').onsubmit = async function(e) {
+        e.preventDefault();
+        const username = document.getElementById('registerUser').value.trim();
+        const password = document.getElementById('registerPass').value;
+        if (!username || !password) {
+            showError('Nom d\'utilisateur et mot de passe requis');
+            return;
+        }
+        const res = await fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        if (res.status === 409) {
+            // Duplicate username
+            showError("ce nom d'utilisateur est déjà sélectionné !");
+            return;
+        }
+        if (!res.ok) {
+            const txt = await res.text();
+            showError(txt || 'Erreur lors de la création du compte');
+            return;
+        }
+        // Success
+        localStorage.setItem('p4_user', username);
+        window.location.href = '/';
+    };
+
+    // Login (AJAX)
+    document.getElementById('loginForm').onsubmit = async function(e) {
+        e.preventDefault();
+        const username = document.getElementById('loginUser').value.trim();
+        const password = document.getElementById('loginPass').value;
+        if (!username || !password) {
+            showError('Nom d\'utilisateur et mot de passe requis');
+            return;
+        }
+        const res = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        if (!res.ok) {
+            const txt = await res.text();
+            showError(txt || 'Erreur lors de la connexion');
+            return;
+        }
+        localStorage.setItem('p4_user', username);
+        window.location.href = '/';
+    };
+
     // Si déjà connecté, skip
     if (localStorage.getItem('p4_user')) {
         window.location.href = '/';
