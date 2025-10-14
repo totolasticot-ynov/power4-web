@@ -32,19 +32,7 @@ func init() {
 }
 
 // Helpers pour le bot (doivent être à la fin du fichier)
-func getRowForCol(board [][]int, col int) int {
-	for r := rows - 1; r >= 0; r-- {
-		if board[r][col] == 0 {
-			return r
-		}
-	}
-	return -1
-}
-
-func playBotMove(state *GameState, row, col int) {
-	state.Board[row][col] = 2
-	state.CurrentPlayer = 1
-}
+// (Anciennes fonctions utilitaires supprimées car non utilisées)
 
 func Menu() error {
 	// API: configurer la taille et la difficulté
@@ -89,9 +77,9 @@ func Menu() error {
 		_ = json.NewDecoder(r.Body).Decode(&req)
 		col := req.Column
 		// Place le pion du joueur humain
-		for row := rows - 1; row >= 0; row-- {
-			if state.Board[row][col] == 0 {
-				state.Board[row][col] = state.CurrentPlayer
+		for r := rows - 1; r >= 0; r-- {
+			if state.Board[r][col] == 0 {
+				state.Board[r][col] = state.CurrentPlayer
 				state.CurrentPlayer = 3 - state.CurrentPlayer
 				break
 			}
@@ -109,11 +97,14 @@ func Menu() error {
 			}
 			if len(validCols) > 0 {
 				botCol := validCols[rand.Intn(len(validCols))]
-				botRow := getRowForCol(state.Board, botCol)
-				if botRow != -1 {
-					playBotMove(&state, botRow, botCol)
-					state.Winner, state.WinCells = checkWinner(state.Board)
+				for r := rows - 1; r >= 0; r-- {
+					if state.Board[r][botCol] == 0 {
+						state.Board[r][botCol] = 2
+						state.CurrentPlayer = 1
+						break
+					}
 				}
+				state.Winner, state.WinCells = checkWinner(state.Board)
 			}
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -122,9 +113,9 @@ func Menu() error {
 
 	// API: reset
 	http.HandleFunc("/api/reset", func(w http.ResponseWriter, r *http.Request) {
-		for i := range state.Board {
-			for j := range state.Board[i] {
-				state.Board[i][j] = 0
+		for r := range state.Board {
+			for c := range state.Board[r] {
+				state.Board[r][c] = 0
 			}
 		}
 		state.CurrentPlayer = 1
@@ -134,7 +125,7 @@ func Menu() error {
 
 	// Page de login
 	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
-		renderTemplate(w, "templates/login/login.html", nil)
+		renderTemplate(w, "templates/login.html", nil)
 	})
 	// Page d'accueil (menu)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -143,6 +134,19 @@ func Menu() error {
 
 	// Page du jeu
 	http.HandleFunc("/jeu", func(w http.ResponseWriter, r *http.Request) {
+		renderTemplate(w, "templates/index/index.html", nil)
+	})
+
+	// Page du jeu - mode classique (6x7, align 4)
+	http.HandleFunc("/jeu/classique", func(w http.ResponseWriter, r *http.Request) {
+		rows, cols, winLen = 6, 7, 4
+		state.Board = make([][]int, rows)
+		for i := range state.Board {
+			state.Board[i] = make([]int, cols)
+		}
+		state.CurrentPlayer = 1
+		state.Winner = 0
+		state.WinCells = nil
 		renderTemplate(w, "templates/index/index.html", nil)
 	})
 

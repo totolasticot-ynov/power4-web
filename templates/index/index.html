@@ -11,6 +11,7 @@
             <h2>Choisissez la difficulté</h2>
             <form id="difficultyForm">
                 <button type="submit" class="button" data-rows="6" data-cols="7" data-win="3">Easy<br><span style="font-size:0.9em;">6x7, 3 pions alignés</span></button>
+                <button type="submit" class="button" data-rows="6" data-cols="7" data-win="4">Classique<br><span style="font-size:0.9em;">6x7, 4 pions alignés</span></button>
                 <button type="submit" class="button" data-rows="6" data-cols="9" data-win="5">Normal<br><span style="font-size:0.9em;">6x9, 5 pions alignés</span></button>
                 <button type="submit" class="button" data-rows="7" data-cols="8" data-win="7">Hard<br><span style="font-size:0.9em;">7x8, 7 pions alignés</span></button>
             </form>
@@ -47,7 +48,7 @@
             await fetch('/api/config', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rows, cols, win })
+                body: JSON.stringify({ rows: parseInt(rows, 10), cols: parseInt(cols, 10), win: parseInt(win, 10) })
             });
             await fetch('/api/reset', { method: 'POST' });
             // Affiche la modale de choix du mode
@@ -99,6 +100,7 @@
         const win = localStorage.getItem('p4_win');
         let titre = 'Puissance 4';
         if (win === '3') titre = 'Puissance 3';
+        else if (win === '4') titre = 'Puissance 4';
         else if (win === '5') titre = 'Puissance 5';
         else if (win === '7') titre = 'Puissance 7';
         document.getElementById('gameTitle').textContent = titre;
