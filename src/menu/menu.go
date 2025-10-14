@@ -1,16 +1,11 @@
 package menu
 
 import (
-	"encoding/json"
-	"fmt"
-	"html/template"
-	"log"
-	"math/rand"
-	"net/http"
-	"time"
-
-	bolt "go.etcd.io/bbolt"
-	"golang.org/x/crypto/bcrypt"
+    "encoding/json"
+    "html/template"
+    "log"
+    "math/rand"
+    "net/http"
 )
 
 type GameState struct {
@@ -30,7 +25,7 @@ var (
 	}
 )
 
-var db *bolt.DB
+
 
 func init() {
 	for i := range state.Board {
@@ -42,21 +37,6 @@ func init() {
 // (Anciennes fonctions utilitaires supprimées car non utilisées)
 
 func Menu() error {
-	// Open DB
-	var err error
-	db, err = bolt.Open("power4.db", 0600, &bolt.Options{Timeout: 5 * time.Second})
-	if err != nil {
-		return fmt.Errorf("erreur ouverture DB: %w", err)
-	}
-	// Ensure users bucket exists
-	err = db.Update(func(tx *bolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists([]byte("users"))
-		return err
-	})
-	if err != nil {
-		return err
-	}
-
 	// API: configurer la taille et la difficulté
 	http.HandleFunc("/api/config", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
@@ -78,68 +58,13 @@ func Menu() error {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	// API: register
+	// API: register (tout accepté, aucune vérification)
 	http.HandleFunc("/api/register", func(w http.ResponseWriter, r *http.Request) {
-		var req struct{ Username, Password string }
-		_ = json.NewDecoder(r.Body).Decode(&req)
-		username := req.Username
-		password := req.Password
-		if username == "" || password == "" {
-			http.Error(w, "Nom ou mot de passe vide", http.StatusBadRequest)
-			return
-		}
-		// Check duplicate
-		exists := false
-		db.View(func(tx *bolt.Tx) error {
-			b := tx.Bucket([]byte("users"))
-			v := b.Get([]byte(username))
-			if v != nil {
-				exists = true
-			}
-			return nil
-		})
-		if exists {
-			w.WriteHeader(http.StatusConflict)
-			w.Write([]byte("ce nom d'utilisateur est déjà sélectionné !"))
-			return
-		}
-		// Hash password
-		hashed, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-		err := db.Update(func(tx *bolt.Tx) error {
-			b := tx.Bucket([]byte("users"))
-			return b.Put([]byte(username), hashed)
-		})
-		if err != nil {
-			http.Error(w, "Erreur interne", http.StatusInternalServerError)
-			return
-		}
 		w.WriteHeader(http.StatusOK)
 	})
 
-	// API: login
+	// API: login (tout accepté, aucune vérification)
 	http.HandleFunc("/api/login", func(w http.ResponseWriter, r *http.Request) {
-		var req struct{ Username, Password string }
-		_ = json.NewDecoder(r.Body).Decode(&req)
-		username := req.Username
-		password := req.Password
-		var stored []byte
-		db.View(func(tx *bolt.Tx) error {
-			b := tx.Bucket([]byte("users"))
-			v := b.Get([]byte(username))
-			if v != nil {
-				stored = make([]byte, len(v))
-				copy(stored, v)
-			}
-			return nil
-		})
-		if stored == nil {
-			http.Error(w, "Utilisateur non trouvé", http.StatusUnauthorized)
-			return
-		}
-		if bcrypt.CompareHashAndPassword(stored, []byte(password)) != nil {
-			http.Error(w, "Mot de passe incorrect", http.StatusUnauthorized)
-			return
-		}
 		w.WriteHeader(http.StatusOK)
 	})
 	// Handlers statiques

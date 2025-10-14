@@ -64,7 +64,6 @@
             <input type="password" id="registerPass" placeholder="Mot de passe" required autocomplete="new-password">
             <button type="submit" class="button">Créer un compte</button>
         </form>
-        <div id="authError" style="color:red;display:none;margin-top:12px;font-weight:600;"></div>
     </div>
     <script>
     // Tabs
@@ -83,65 +82,19 @@
         document.getElementById('authError').style.display = 'none';
     };
 
-    // Helper to show error in red
-    function showError(msg) {
-        const e = document.getElementById('authError');
-        e.textContent = msg;
-        e.style.display = 'block';
-    }
-
-    // Register (AJAX)
-    document.getElementById('registerForm').onsubmit = async function(e) {
+    // Login/register sans aucune vérification, tout passe
+    document.getElementById('registerForm').onsubmit = function(e) {
         e.preventDefault();
-        const username = document.getElementById('registerUser').value.trim();
-        const password = document.getElementById('registerPass').value;
-        if (!username || !password) {
-            showError('Nom d\'utilisateur et mot de passe requis');
-            return;
-        }
-        const res = await fetch('/api/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
-        });
-        if (res.status === 409) {
-            // Duplicate username
-            showError("ce nom d'utilisateur est déjà sélectionné !");
-            return;
-        }
-        if (!res.ok) {
-            const txt = await res.text();
-            showError(txt || 'Erreur lors de la création du compte');
-            return;
-        }
-        // Success
+        const username = document.getElementById('registerUser').value.trim() || 'Utilisateur';
         localStorage.setItem('p4_user', username);
         window.location.href = '/';
     };
-
-    // Login (AJAX)
-    document.getElementById('loginForm').onsubmit = async function(e) {
+    document.getElementById('loginForm').onsubmit = function(e) {
         e.preventDefault();
-        const username = document.getElementById('loginUser').value.trim();
-        const password = document.getElementById('loginPass').value;
-        if (!username || !password) {
-            showError('Nom d\'utilisateur et mot de passe requis');
-            return;
-        }
-        const res = await fetch('/api/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
-        });
-        if (!res.ok) {
-            const txt = await res.text();
-            showError(txt || 'Erreur lors de la connexion');
-            return;
-        }
+        const username = document.getElementById('loginUser').value.trim() || 'Utilisateur';
         localStorage.setItem('p4_user', username);
         window.location.href = '/';
     };
-
     // Si déjà connecté, skip
     if (localStorage.getItem('p4_user')) {
         window.location.href = '/';
