@@ -89,9 +89,9 @@ func Menu() error {
 		_ = json.NewDecoder(r.Body).Decode(&req)
 		col := req.Column
 		// Place le pion du joueur humain
-		for r := rows - 1; r >= 0; r-- {
-			if state.Board[r][col] == 0 {
-				state.Board[r][col] = state.CurrentPlayer
+		for row := rows - 1; row >= 0; row-- {
+			if state.Board[row][col] == 0 {
+				state.Board[row][col] = state.CurrentPlayer
 				state.CurrentPlayer = 3 - state.CurrentPlayer
 				break
 			}
@@ -109,14 +109,11 @@ func Menu() error {
 			}
 			if len(validCols) > 0 {
 				botCol := validCols[rand.Intn(len(validCols))]
-				for r := rows - 1; r >= 0; r-- {
-					if state.Board[r][botCol] == 0 {
-						state.Board[r][botCol] = 2
-						state.CurrentPlayer = 1
-						break
-					}
+				botRow := getRowForCol(state.Board, botCol)
+				if botRow != -1 {
+					playBotMove(&state, botRow, botCol)
+					state.Winner, state.WinCells = checkWinner(state.Board)
 				}
-				state.Winner, state.WinCells = checkWinner(state.Board)
 			}
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -125,9 +122,9 @@ func Menu() error {
 
 	// API: reset
 	http.HandleFunc("/api/reset", func(w http.ResponseWriter, r *http.Request) {
-		for r := range state.Board {
-			for c := range state.Board[r] {
-				state.Board[r][c] = 0
+		for i := range state.Board {
+			for j := range state.Board[i] {
+				state.Board[i][j] = 0
 			}
 		}
 		state.CurrentPlayer = 1
@@ -137,7 +134,7 @@ func Menu() error {
 
 	// Page de login
 	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
-		renderTemplate(w, "templates/login.html", nil)
+		renderTemplate(w, "templates/login/login.html", nil)
 	})
 	// Page d'accueil (menu)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
