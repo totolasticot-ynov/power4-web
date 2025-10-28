@@ -1,11 +1,11 @@
 package menu
 
 import (
-    "encoding/json"
-    "html/template"
-    "log"
-    "math/rand"
-    "net/http"
+	"encoding/json"
+	"html/template"
+	"log"
+	"math/rand"
+	"net/http"
 )
 
 type GameState struct {
@@ -24,6 +24,8 @@ var (
 		WinCells:      nil,
 	}
 )
+
+ 
 
 
 
@@ -97,16 +99,57 @@ func Menu() error {
 			}
 		}
 		state.Winner, state.WinCells = checkWinner(state.Board)
-		// Si mode solo et pas de gagnant, le bot joue
+		// Si mode solo et pas de gagnant, le bot joue immédiatement (synchronement)
 		mode := r.Header.Get("X-P4-Mode")
 		if mode == "solo" && state.Winner == 0 && state.CurrentPlayer == 2 {
-			// Bot = joue un coup aléatoire valide
+			// Bot amélioré : gagne si possible, sinon bloque, sinon aléatoire
 			validCols := []int{}
 			for c := 0; c < cols; c++ {
 				if state.Board[0][c] == 0 {
 					validCols = append(validCols, c)
 				}
 			}
+			// 1. Cherche à gagner
+			for _, c := range validCols {
+				row := -1
+				for r := rows - 1; r >= 0; r-- {
+					if state.Board[r][c] == 0 {
+						row = r
+						break
+					}
+				}
+				if row == -1 { continue }
+				state.Board[row][c] = 2
+				win, _ := checkWinner(state.Board)
+				state.Board[row][c] = 0
+				if win == 2 {
+					state.Board[row][c] = 2
+					state.CurrentPlayer = 1
+					state.Winner, state.WinCells = checkWinner(state.Board)
+					goto bot_end
+				}
+			}
+			// 2. Bloque l'adversaire
+			for _, c := range validCols {
+				row := -1
+				for r := rows - 1; r >= 0; r-- {
+					if state.Board[r][c] == 0 {
+						row = r
+						break
+					}
+				}
+				if row == -1 { continue }
+				state.Board[row][c] = 1
+				win, _ := checkWinner(state.Board)
+				state.Board[row][c] = 0
+				if win == 1 {
+					state.Board[row][c] = 2
+					state.CurrentPlayer = 1
+					state.Winner, state.WinCells = checkWinner(state.Board)
+					goto bot_end
+				}
+			}
+			// 3. Sinon, joue aléatoirement
 			if len(validCols) > 0 {
 				botCol := validCols[rand.Intn(len(validCols))]
 				for r := rows - 1; r >= 0; r-- {
@@ -118,6 +161,7 @@ func Menu() error {
 				}
 				state.Winner, state.WinCells = checkWinner(state.Board)
 			}
+		bot_end:
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(state)

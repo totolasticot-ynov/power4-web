@@ -35,6 +35,7 @@ async function play(col) {
     headers: { "Content-Type": "application/json", "X-P4-Mode": mode },
     body: JSON.stringify({ column: col }),
   });
+  // Mise à jour immédiate du plateau pour voir notre coup
   fetchBoard();
 }
 
