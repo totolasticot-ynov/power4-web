@@ -86,6 +86,11 @@ async function resetGame() {
   try {
     // Demande au backend de réinitialiser le plateau
     await fetch(API_BASE_LOCAL + "/api/reset", { method: "POST" });
+    // Réinitialise aussi le flag de score pour la prochaine partie
+    scoreUpdated = false;
+    // Supprime l'affichage local du delta de score (s'il existe)
+    const oldScoreEl = document.getElementById('scoreChange');
+    if (oldScoreEl && oldScoreEl.parentNode) oldScoreEl.parentNode.removeChild(oldScoreEl);
     fetchBoard();
   } catch (err) {
     console.error('reset error', err);
@@ -94,6 +99,43 @@ async function resetGame() {
 }
 
 let lastMove = null;
+// Empêche d'envoyer plusieurs fois le même update de score pour une même partie
+let scoreUpdated = false;
+
+// Détermine l'URL vers l'endpoint PHP qui gère le score.
+// On tente de deviner la base du projet si la page est servie via Apache sous /power4-web.
+const PROJECT_BASE = (location.href.indexOf('/power4-web') !== -1) ? '/power4-web' : '';
+const SCORE_ENDPOINT = PROJECT_BASE + '/templates/login/score.php';
+
+// Rafraîchit le leaderboard si présent dans la page (et met à jour l'affichage du score si possible)
+function refreshLeaderboard() {
+  try {
+    const lb = document.getElementById('leaderboardList');
+    if (!lb) return; // pas de leaderboard sur cette page
+    const lbEndpoint = PROJECT_BASE + '/templates/login/leaderboard.php';
+    fetch(lbEndpoint).then(r => r.json()).then(list => {
+      lb.innerHTML = '';
+      if (!Array.isArray(list) || list.length === 0) {
+        const li = document.createElement('li'); li.textContent = 'Aucun joueur'; lb.appendChild(li);
+        return;
+      }
+      const me = localStorage.getItem('p4_user');
+      list.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = item.username + ' — ' + item.score;
+        if (me && item.username === me) {
+          li.style.fontWeight = '700';
+          li.style.color = '#2b8a3e';
+        }
+        lb.appendChild(li);
+      });
+    }).catch(err => {
+      console.warn('Impossible de rafraîchir le leaderboard', err);
+    });
+  } catch (e) {
+    console.warn('refreshLeaderboard error', e);
+  }
+}
 
 
 function renderBoard(state) {
@@ -164,6 +206,53 @@ function updateMessage(state) {
   } else {
     const color = state.currentPlayer === 1 ? '<span class="jaune">jaune</span>' : '<span class="rouge">rouge</span>';
     message.innerHTML = `À ${color} de jouer.`;
+  }
+
+  // Si la partie est terminée et qu'on joue en solo, on affiche combien de points ont été gagnés/perdus
+  try {
+    const mode = localStorage.getItem('p4_mode') || 'multi';
+    const user = localStorage.getItem('p4_user') || null;
+    if (mode === 'solo' && user && state.winner !== 0 && !scoreUpdated) {
+      // winner === 1 : joueur humain gagne ; winner === 2 : bot gagne
+      const delta = (state.winner === 1) ? 1 : -1;
+
+      // Affiche le delta sous le message principal
+      let scoreEl = document.getElementById('scoreChange');
+      if (!scoreEl) {
+        scoreEl = document.createElement('div');
+        scoreEl.id = 'scoreChange';
+        scoreEl.style.marginTop = '8px';
+        scoreEl.style.fontWeight = '700';
+        scoreEl.style.fontSize = '0.95em';
+        scoreEl.style.color = state.winner === 1 ? '#2b8a3e' : '#c0392b';
+        if (message && message.parentNode) message.parentNode.insertBefore(scoreEl, message.nextSibling);
+      }
+      scoreEl.textContent = (delta > 0 ? '+' + delta : String(delta)) + ' point' + (Math.abs(delta) > 1 ? 's' : '');
+
+      // Envoi POST application/x-www-form-urlencoded { username, delta } pour persister
+      fetch(SCORE_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ username: user, delta: String(delta) })
+      }).then(res => res.text()).then(txt => {
+        console.log('score update response', txt);
+        // si le serveur renvoie le score mis à jour, on l'affiche dans #scoreDisplay
+        const newScore = parseInt(txt, 10);
+        if (!isNaN(newScore)) {
+          const sd = document.getElementById('scoreDisplay');
+          if (sd) sd.textContent = 'Score: ' + newScore;
+        }
+        scoreUpdated = true;
+        // rafraîchit le leaderboard si présent
+        refreshLeaderboard();
+      }).catch(err => {
+        console.warn('score update failed', err);
+        // Indique l'échec de la mise à jour serveur sans empêcher l'affichage local
+        if (scoreEl) scoreEl.textContent += ' (non sauvegardé)';
+      });
+    }
+  } catch (e) {
+    console.warn('score update error', e);
   }
 }
 
