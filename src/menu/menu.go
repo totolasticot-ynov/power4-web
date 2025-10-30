@@ -1,11 +1,11 @@
 package menu
 
 import (
-    "encoding/json"
-    "html/template"
-    "log"
-    "math/rand"
-    "net/http"
+	"encoding/json"
+	"html/template"
+	"log"
+	"math/rand"
+	"net/http"
 )
 
 type GameState struct {
@@ -14,6 +14,9 @@ type GameState struct {
 	Winner        int      `json:"winner"`
 	WinCells      [][2]int `json:"winCells"`
 }
+
+// GameState contient l'état partagé du jeu : plateau, joueur courant, gagnant et cellules gagnantes.
+// rows, cols et winLen définissent la taille du plateau et le nombre de jetons à aligner pour gagner.
 
 var (
 	rows, cols, winLen = 6, 7, 3
@@ -25,6 +28,8 @@ var (
 	}
 )
 
+ 
+
 
 
 func init() {
@@ -33,12 +38,31 @@ func init() {
 	}
 }
 
+// init initialise le plateau à la taille par défaut.
+// Les cases sont représentées par des int : 0 = vide, 1 = joueur 1, 2 = joueur 2.
+
 // Helpers pour le bot (doivent être à la fin du fichier)
 // (Anciennes fonctions utilitaires supprimées car non utilisées)
 
 func Menu() error {
+	// Petit helper pour gérer le CORS et répondre aux requêtes OPTIONS (préflight).
+	setCORS := func(w http.ResponseWriter, r *http.Request) bool {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-P4-Mode")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return true
+		}
+		return false
+	}
+
 	// API: configurer la taille et la difficulté
+	// Reçoit JSON {rows, cols, win} et recrée l'état du plateau en conséquence.
 	http.HandleFunc("/api/config", func(w http.ResponseWriter, r *http.Request) {
+		if setCORS(w, r) {
+			return
+		}
 		var req struct {
 			Rows int `json:"rows"`
 			Cols int `json:"cols"`
@@ -59,12 +83,15 @@ func Menu() error {
 	})
 
 	// API: register (tout accepté, aucune vérification)
+	// Endpoints minimalistes pour l'interface (simples stubs si on n'utilise pas l'auth Go).
 	http.HandleFunc("/api/register", func(w http.ResponseWriter, r *http.Request) {
+		if setCORS(w, r) { return }
 		w.WriteHeader(http.StatusOK)
 	})
 
 	// API: login (tout accepté, aucune vérification)
 	http.HandleFunc("/api/login", func(w http.ResponseWriter, r *http.Request) {
+		if setCORS(w, r) { return }
 		w.WriteHeader(http.StatusOK)
 	})
 	// Handlers statiques
@@ -72,14 +99,19 @@ func Menu() error {
 	http.Handle("/src/", http.StripPrefix("/src/", http.FileServer(http.Dir("src"))))
 
 	// API: état du jeu
+	// Renvoie l'état courant (board, currentPlayer, winner, winCells) en JSON
 	http.HandleFunc("/api/board", func(w http.ResponseWriter, r *http.Request) {
+		if setCORS(w, r) { return }
 		state.Winner, state.WinCells = checkWinner(state.Board)
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(state)
 	})
 
 	// API: jouer un coup
+	// Reçoit {column:int} en POST et place le jeton du joueur courant dans cette colonne.
+	// Valide la colonne, met à jour l'état, puis exécute éventuellement le bot en mode solo.
 	http.HandleFunc("/api/play", func(w http.ResponseWriter, r *http.Request) {
+		if setCORS(w, r) { return }
 		if state.Winner != 0 {
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(state)
@@ -88,25 +120,76 @@ func Menu() error {
 		var req struct{ Column int }
 		_ = json.NewDecoder(r.Body).Decode(&req)
 		col := req.Column
-		// Place le pion du joueur humain
-		for r := rows - 1; r >= 0; r-- {
-			if state.Board[r][col] == 0 {
-				state.Board[r][col] = state.CurrentPlayer
+		// simple validation: colonne dans les bornes
+		if col < 0 || col >= cols {
+			http.Error(w, "invalid column", http.StatusBadRequest)
+			return
+		}
+		// Place le pion du joueur humain : on parcourt la colonne de bas en haut
+		// et on positionne le premier emplacement vide trouvé.
+		for rr := rows - 1; rr >= 0; rr-- {
+			if state.Board[rr][col] == 0 {
+				state.Board[rr][col] = state.CurrentPlayer
+				// change le joueur courant : 1 <-> 2 (3 - current)
 				state.CurrentPlayer = 3 - state.CurrentPlayer
 				break
 			}
 		}
 		state.Winner, state.WinCells = checkWinner(state.Board)
-		// Si mode solo et pas de gagnant, le bot joue
+		// Si mode solo et pas de gagnant, le bot joue immédiatement (synchronement)
 		mode := r.Header.Get("X-P4-Mode")
 		if mode == "solo" && state.Winner == 0 && state.CurrentPlayer == 2 {
-			// Bot = joue un coup aléatoire valide
+			// Bot amélioré : stratégie en 3 étapes :
+			// 1) cherche un coup qui lui permet de gagner immédiatement
+			// 2) si pas possible, cherche un coup qui empêche l'adversaire de gagner
+			// 3) sinon, joue une colonne aléatoire valide
 			validCols := []int{}
 			for c := 0; c < cols; c++ {
 				if state.Board[0][c] == 0 {
 					validCols = append(validCols, c)
 				}
 			}
+			// 1. Cherche à gagner
+			for _, c := range validCols {
+				row := -1
+				for r := rows - 1; r >= 0; r-- {
+					if state.Board[r][c] == 0 {
+						row = r
+						break
+					}
+				}
+				if row == -1 { continue }
+				state.Board[row][c] = 2
+				win, _ := checkWinner(state.Board)
+				state.Board[row][c] = 0
+				if win == 2 {
+					state.Board[row][c] = 2
+					state.CurrentPlayer = 1
+					state.Winner, state.WinCells = checkWinner(state.Board)
+					goto bot_end
+				}
+			}
+			// 2. Bloque l'adversaire
+			for _, c := range validCols {
+				row := -1
+				for r := rows - 1; r >= 0; r-- {
+					if state.Board[r][c] == 0 {
+						row = r
+						break
+					}
+				}
+				if row == -1 { continue }
+				state.Board[row][c] = 1
+				win, _ := checkWinner(state.Board)
+				state.Board[row][c] = 0
+				if win == 1 {
+					state.Board[row][c] = 2
+					state.CurrentPlayer = 1
+					state.Winner, state.WinCells = checkWinner(state.Board)
+					goto bot_end
+				}
+			}
+			// 3. Sinon, joue aléatoirement
 			if len(validCols) > 0 {
 				botCol := validCols[rand.Intn(len(validCols))]
 				for r := rows - 1; r >= 0; r-- {
@@ -118,13 +201,16 @@ func Menu() error {
 				}
 				state.Winner, state.WinCells = checkWinner(state.Board)
 			}
+		bot_end:
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(state)
 	})
 
 	// API: reset
+	// Réinitialise toutes les cases à 0 et remet le joueur courant à 1
 	http.HandleFunc("/api/reset", func(w http.ResponseWriter, r *http.Request) {
+		if setCORS(w, r) { return }
 		for r := range state.Board {
 			for c := range state.Board[r] {
 				state.Board[r][c] = 0
@@ -162,7 +248,9 @@ func Menu() error {
 		renderTemplate(w, "templates/index/index.html", nil)
 	})
 
-	log.Println("Serveur démarré sur http://localhost:8080 🚀")
+	log.Println("Serveur Go démarré sur http://localhost:8080 🚀")
+	log.Println("Page de connexion (Go server): http://localhost:8080/login")
+	log.Println("Si tu utilises Apache/XAMPP, page de connexion statique: http://127.0.0.1/power4-web/templates/login/login.html")
 	return http.ListenAndServe(":8080", nil)
 }
 
@@ -244,6 +332,7 @@ func checkWinner(board [][]int) (int, [][2]int) {
 			}
 		}
 	}
+	// Aucun gagnant trouvé
 	return 0, nil
 }
 

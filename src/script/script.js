@@ -1,10 +1,16 @@
 
 
+// Eléments du DOM principaux
 const boardEl = document.getElementById("board");
 const resetBtn = document.getElementById("resetBtn");
+// currentPlayer: 1 ou 2, winner: 0 => pas de gagnant, sinon le numéro du joueur gagnant
 let currentPlayer = 1;
 let winner = 0;
 const message = document.getElementById('message');
+
+// API base: prefer an existing global `API_BASE` if another template set it (avoids redeclaration),
+// otherwise compute a sensible default (relative when served by Go on :8080, or localhost otherwise)
+const API_BASE_LOCAL = (typeof API_BASE !== 'undefined') ? API_BASE : ((location.port === '8080') ? '' : 'http://localhost:8080');
 
 // Récupère la config stockée (localStorage)
 let p4_rows = parseInt(localStorage.getItem('p4_rows') || '6');
@@ -13,40 +19,127 @@ let p4_win = parseInt(localStorage.getItem('p4_win') || '3');
 
 // Envoie la config au backend si besoin
 async function sendConfig() {
-  await fetch('/api/config', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ rows: p4_rows, cols: p4_cols, win: p4_win })
-  });
+  try {
+    // Envoie la configuration choisie au backend (POST JSON {rows,cols,win})
+    const res = await fetch(API_BASE_LOCAL + '/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows: p4_rows, cols: p4_cols, win: p4_win })
+    });
+    return res.ok;
+  } catch (err) {
+    console.error('sendConfig error', err);
+    return false;
+  }
 }
 
 async function fetchBoard() {
-  const res = await fetch("/api/board");
-  const state = await res.json();
-  renderBoard(state);
-  updateMessage(state);
+  try {
+    // Récupère l'état du jeu depuis le backend et met à jour l'affichage
+    const res = await fetch(API_BASE_LOCAL + "/api/board");
+    if (!res.ok) throw new Error('API returned ' + res.status);
+    const state = await res.json();
+    renderBoard(state);
+    updateMessage(state);
+  } catch (err) {
+    console.error('fetchBoard error', err);
+    if (message) message.innerHTML = "Impossible de contacter le backend du jeu (api). Démarre le serveur Go ou vérifie qu'il écoute sur http://localhost:8080";
+  }
 }
 
 async function play(col) {
   if (winner !== 0) return;
   const mode = localStorage.getItem('p4_mode') || 'multi';
-  await fetch("/api/play", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-P4-Mode": mode },
-    body: JSON.stringify({ column: col }),
-  });
-  fetchBoard();
+  // Validate column index
+  if (typeof col !== 'number' || isNaN(col) || col < 0 || col >= p4_cols) {
+    console.warn('play() called with invalid column:', col);
+    if (message) message.innerHTML = 'Colonne invalide.';
+    return;
+  }
+  try {
+    // Envoi du coup au backend. On ajoute un header X-P4-Mode pour indiquer solo/multi.
+    console.log('Sending play to', API_BASE_LOCAL + '/api/play', { column: col, mode });
+    const res = await fetch(API_BASE_LOCAL + "/api/play", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-P4-Mode": mode },
+      body: JSON.stringify({ column: col }),
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      throw new Error('play API ' + res.status + ' ' + txt);
+    }
+    // Mise à jour immédiate du plateau pour afficher l'état renvoyé par le serveur
+    const newState = await res.json().catch(() => null);
+    if (newState) {
+      renderBoard(newState);
+      updateMessage(newState);
+    } else {
+      fetchBoard();
+    }
+  } catch (err) {
+    console.error('play error', err);
+    if (message) message.innerHTML = 'Erreur: impossible d\'envoyer le coup au serveur. ' + (err && err.message ? err.message : '');
+  }
 }
 
 async function resetGame() {
-  await fetch("/api/reset", { method: "POST" });
-  fetchBoard();
+  try {
+    // Demande au backend de réinitialiser le plateau
+    await fetch(API_BASE_LOCAL + "/api/reset", { method: "POST" });
+    // Réinitialise aussi le flag de score pour la prochaine partie
+    scoreUpdated = false;
+    // Supprime l'affichage local du delta de score (s'il existe)
+    const oldScoreEl = document.getElementById('scoreChange');
+    if (oldScoreEl && oldScoreEl.parentNode) oldScoreEl.parentNode.removeChild(oldScoreEl);
+    fetchBoard();
+  } catch (err) {
+    console.error('reset error', err);
+    if (message) message.innerHTML = 'Erreur: impossible de réinitialiser la partie.';
+  }
 }
 
 let lastMove = null;
+// Empêche d'envoyer plusieurs fois le même update de score pour une même partie
+let scoreUpdated = false;
+
+// Détermine l'URL vers l'endpoint PHP qui gère le score.
+// On tente de deviner la base du projet si la page est servie via Apache sous /power4-web.
+const PROJECT_BASE = (location.href.indexOf('/power4-web') !== -1) ? '/power4-web' : '';
+const SCORE_ENDPOINT = PROJECT_BASE + '/templates/login/score.php';
+
+// Rafraîchit le leaderboard si présent dans la page (et met à jour l'affichage du score si possible)
+function refreshLeaderboard() {
+  try {
+    const lb = document.getElementById('leaderboardList');
+    if (!lb) return; // pas de leaderboard sur cette page
+    const lbEndpoint = PROJECT_BASE + '/templates/login/leaderboard.php';
+    fetch(lbEndpoint).then(r => r.json()).then(list => {
+      lb.innerHTML = '';
+      if (!Array.isArray(list) || list.length === 0) {
+        const li = document.createElement('li'); li.textContent = 'Aucun joueur'; lb.appendChild(li);
+        return;
+      }
+      const me = localStorage.getItem('p4_user');
+      list.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = item.username + ' — ' + item.score;
+        if (me && item.username === me) {
+          li.style.fontWeight = '700';
+          li.style.color = '#2b8a3e';
+        }
+        lb.appendChild(li);
+      });
+    }).catch(err => {
+      console.warn('Impossible de rafraîchir le leaderboard', err);
+    });
+  } catch (e) {
+    console.warn('refreshLeaderboard error', e);
+  }
+}
 
 
 function renderBoard(state) {
+  // Reconstruit l'affichage du plateau depuis l'état JSON du serveur
   boardEl.innerHTML = "";
   currentPlayer = state.currentPlayer;
   winner = state.winner;
@@ -69,18 +162,19 @@ function renderBoard(state) {
     }
   }
 
-  // Affichage dynamique selon la config
+  // Affichage dynamique selon la config stockée (p4_rows / p4_cols)
   for (let r = 0; r < p4_rows; r++) {
     for (let c = 0; c < p4_cols; c++) {
       const cell = (state.board[r] || [])[c] || 0;
       const cellEl = document.createElement("div");
       cellEl.classList.add("cell");
-      cellEl.addEventListener("click", () => play(c));
+  // Clic sur une case -> jouer dans la colonne c
+  cellEl.addEventListener("click", () => play(c));
 
       if (cell !== 0) {
         const token = document.createElement("div");
         token.classList.add("token", cell === 1 ? "p1" : "p2");
-        // Animation de chute classique
+        // Animation de chute classique (ajoute une classe CSS et variables pour la durée/distance)
         if (lastMove && lastMove.row === r && lastMove.col === c) {
           token.classList.add("fall-real");
           token.style.setProperty('--fall-dist', `${(r) * 68}px`);
@@ -96,7 +190,7 @@ function renderBoard(state) {
       boardEl.appendChild(cellEl);
     }
   }
-  // CSS grid dynamique
+  // Ajuste la grille CSS en fonction du nombre de colonnes/lignes
   boardEl.style.gridTemplateColumns = `repeat(${p4_cols}, 1fr)`;
   boardEl.style.gridTemplateRows = `repeat(${p4_rows}, 1fr)`;
   window.oldBoard = state.board.map(row => row.slice());
@@ -112,6 +206,53 @@ function updateMessage(state) {
   } else {
     const color = state.currentPlayer === 1 ? '<span class="jaune">jaune</span>' : '<span class="rouge">rouge</span>';
     message.innerHTML = `À ${color} de jouer.`;
+  }
+
+  // Si la partie est terminée et qu'on joue en solo, on affiche combien de points ont été gagnés/perdus
+  try {
+    const mode = localStorage.getItem('p4_mode') || 'multi';
+    const user = localStorage.getItem('p4_user') || null;
+    if (mode === 'solo' && user && state.winner !== 0 && !scoreUpdated) {
+      // winner === 1 : joueur humain gagne ; winner === 2 : bot gagne
+      const delta = (state.winner === 1) ? 1 : -1;
+
+      // Affiche le delta sous le message principal
+      let scoreEl = document.getElementById('scoreChange');
+      if (!scoreEl) {
+        scoreEl = document.createElement('div');
+        scoreEl.id = 'scoreChange';
+        scoreEl.style.marginTop = '8px';
+        scoreEl.style.fontWeight = '700';
+        scoreEl.style.fontSize = '0.95em';
+        scoreEl.style.color = state.winner === 1 ? '#2b8a3e' : '#c0392b';
+        if (message && message.parentNode) message.parentNode.insertBefore(scoreEl, message.nextSibling);
+      }
+      scoreEl.textContent = (delta > 0 ? '+' + delta : String(delta)) + ' point' + (Math.abs(delta) > 1 ? 's' : '');
+
+      // Envoi POST application/x-www-form-urlencoded { username, delta } pour persister
+      fetch(SCORE_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ username: user, delta: String(delta) })
+      }).then(res => res.text()).then(txt => {
+        console.log('score update response', txt);
+        // si le serveur renvoie le score mis à jour, on l'affiche dans #scoreDisplay
+        const newScore = parseInt(txt, 10);
+        if (!isNaN(newScore)) {
+          const sd = document.getElementById('scoreDisplay');
+          if (sd) sd.textContent = 'Score: ' + newScore;
+        }
+        scoreUpdated = true;
+        // rafraîchit le leaderboard si présent
+        refreshLeaderboard();
+      }).catch(err => {
+        console.warn('score update failed', err);
+        // Indique l'échec de la mise à jour serveur sans empêcher l'affichage local
+        if (scoreEl) scoreEl.textContent += ' (non sauvegardé)';
+      });
+    }
+  } catch (e) {
+    console.warn('score update error', e);
   }
 }
 

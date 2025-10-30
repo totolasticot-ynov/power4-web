@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Connexion</title>
-    <link rel="stylesheet" href="/assets/style/style.css">
+    <link rel="stylesheet" href="../../assets/style/style.css">
     <style>
     .login-container {
         background: rgba(255,255,255,0.10);
@@ -29,11 +29,22 @@
         border: none;
         border-radius: 8px 8px 0 0;
         margin: 0 2px;
-        transition: background 0.2s, color 0.2s;
+        transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 140px;
+        box-shadow: 0 2px 8px rgba(85,99,222,0.08);
+    }
+    .login-tab:hover {
+        background: #5563DE;
+        color: #fff;
+        box-shadow: 0 4px 16px rgba(85,99,222,0.18);
     }
     .login-tab.active {
         background: #5563DE;
         color: #fff;
+        box-shadow: 0 4px 16px rgba(85,99,222,0.18);
     }
     .login-form input {
         width: 90%;
@@ -64,8 +75,11 @@
             <input type="password" id="registerPass" placeholder="Mot de passe" required autocomplete="new-password">
             <button type="submit" class="button">Créer un compte</button>
         </form>
+        <div id="authError" style="display:none;color:#ff6666;margin-top:12px;font-weight:600;"></div>
     </div>
     <script>
+    // (debug helpers removed) -- normal behaviour restored
+
     // Tabs
     document.getElementById('tab-login').onclick = function() {
         this.classList.add('active');
@@ -83,21 +97,96 @@
     };
 
     // Login/register sans aucune vérification, tout passe
-    document.getElementById('registerForm').onsubmit = function(e) {
+    document.getElementById('registerForm').onsubmit = async function(e) {
         e.preventDefault();
-        const username = document.getElementById('registerUser').value.trim() || 'Utilisateur';
-        localStorage.setItem('p4_user', username);
-        window.location.href = '/';
+        const username = document.getElementById('registerUser').value.trim();
+        const password = document.getElementById('registerPass').value.trim();
+
+        if (!username || !password) {
+            document.getElementById('authError').textContent = "Veuillez renseigner un nom d'utilisateur et un mot de passe";
+            document.getElementById('authError').style.display = 'block';
+            return;
+        }
+
+        try {
+            const response = await fetch('register.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ username, password })
+            });
+            const result = await response.text();
+            if (result === 'success') {
+                localStorage.setItem('p4_user', username);
+                // Show a clickable link instead of redirecting automatically so we can inspect the behavior
+                document.getElementById('authError').style.display = 'none';
+                const msg = document.createElement('div');
+                msg.style.marginTop = '12px';
+                msg.style.fontWeight = '600';
+                msg.innerHTML = `Compte créé ✅ — <a href="http://127.0.0.1/power4-web/templates/menu/menu.html" id="goSiteLink">Aller au site</a>`;
+                document.querySelector('.login-container').appendChild(msg);
+                document.getElementById('goSiteLink').onclick = function(e) { e.preventDefault(); window.location.href = 'http://127.0.0.1/power4-web/templates/menu/menu.html'; };
+            } else if (result === 'exists') {
+                document.getElementById('authError').textContent = "Ce nom d'utilisateur est déjà pris.";
+                document.getElementById('authError').style.display = 'block';
+            } else {
+                document.getElementById('authError').textContent = "Erreur lors de la création du compte.";
+                document.getElementById('authError').style.display = 'block';
+            }
+        } catch (err) {
+            document.getElementById('authError').textContent = "Erreur réseau — réessayez plus tard.";
+            document.getElementById('authError').style.display = 'block';
+        }
     };
-    document.getElementById('loginForm').onsubmit = function(e) {
+
+    document.getElementById('loginForm').onsubmit = async function(e) {
         e.preventDefault();
-        const username = document.getElementById('loginUser').value.trim() || 'Utilisateur';
-        localStorage.setItem('p4_user', username);
-        window.location.href = '/';
+        const username = document.getElementById('loginUser').value.trim();
+        const password = document.getElementById('loginPass').value.trim();
+
+        // Simple client-side validation
+        if (!username || !password) {
+            document.getElementById('authError').textContent = "Veuillez renseigner le nom d'utilisateur et le mot de passe";
+            document.getElementById('authError').style.display = 'block';
+            return;
+        }
+
+        try {
+            const response = await fetch('login.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ username, password })
+            });
+
+            const result = await response.text();
+            if (result === 'success') {
+                localStorage.setItem('p4_user', username);
+                document.getElementById('authError').style.display = 'none';
+                const msg = document.createElement('div');
+                msg.style.marginTop = '12px';
+                msg.style.fontWeight = '600';
+                msg.innerHTML = `Connexion réussie ✅ — <a href="http://127.0.0.1/power4-web/templates/menu/menu.html" id="goSiteLink2">Aller au site</a>`;
+                document.querySelector('.login-container').appendChild(msg);
+                document.getElementById('goSiteLink2').onclick = function(e) { e.preventDefault(); window.location.href = 'http://127.0.0.1/power4-web/templates/menu/menu.html'; };
+            } else {
+                document.getElementById('authError').textContent = "Nom d'utilisateur ou mot de passe incorrect";
+                document.getElementById('authError').style.display = 'block';
+            }
+        } catch (err) {
+            document.getElementById('authError').textContent = "Erreur réseau — réessayez plus tard.";
+            document.getElementById('authError').style.display = 'block';
+        }
     };
-    // Si déjà connecté, skip
+    // Si déjà connecté : ne pas rediriger automatiquement (évite les boucles avec l'index)
+    // L'utilisateur peut cliquer sur "Continuer" pour aller au menu principal.
     if (localStorage.getItem('p4_user')) {
-        window.location.href = '/';
+        const cont = document.createElement('div');
+        cont.style.marginTop = '12px';
+        cont.style.fontWeight = '600';
+        cont.innerHTML = `Vous êtes déjà connecté en tant que <strong>${localStorage.getItem('p4_user')}</strong>. <button id="continueBtn" class="button" style="display:inline-block;min-width:140px;margin-left:12px;">Continuer</button>`;
+        document.querySelector('.login-container').appendChild(cont);
+        document.getElementById('continueBtn').onclick = function() {
+            window.location.href = 'http://127.0.0.1/power4-web/templates/menu/menu.html';
+        };
     }
     </script>
 </body>

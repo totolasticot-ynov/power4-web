@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Accueil</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/style/style.css">
+    <link rel="stylesheet" href="../../assets/style/style.css">
 </head>
 <body class="menu-bg">
     <div style="position:fixed;top:24px;left:24px;z-index:102;">
@@ -13,10 +13,20 @@
             <button id="logoutBtn" style="width:100%;padding:12px 0;border:none;background:none;cursor:pointer;font-weight:600;">Déconnexion</button>
         </div>
     </div>
+    <!-- Score affiché en haut à droite, symétrique au bouton compte -->
+    <div id="scoreBox" style="position:fixed;top:24px;right:24px;z-index:102;text-align:right;">
+        <div id="scoreDisplay" class="button" style="min-width:120px;display:inline-block;">Score: —</div>
+        <div id="leaderboardBox" style="margin-top:8px;background:rgba(255,255,255,0.06);padding:8px;border-radius:8px;min-width:180px;text-align:left;box-shadow:0 2px 8px rgba(0,0,0,0.12);">
+            <div style="font-weight:700;margin-bottom:6px;">Top joueurs</div>
+            <ol id="leaderboardList" style="margin:0;padding-left:18px;"> 
+                <li style="color:#999;">Chargement...</li>
+            </ol>
+        </div>
+    </div>
     <div class="menu-container">
         <h1>Bienvenue sur mon serveur Go 🚀</h1>
         <h2>Jouez au Puissance 4 contre un ami !</h2>
-    <a href="/jeu" class="button">🎮 Jouer au Puissance 4</a>
+    <a href="../index/index.html" class="button">🎮 Jouer au Puissance 4</a>
         <button class="button" id="rulesBtn">📖 Règles</button>
     </div>
     <button class="button" id="historyBtn" style="position:fixed;bottom:32px;right:32px;z-index:101;box-shadow:0 2px 8px rgba(85,99,222,0.18);">📜 Histoire</button>
@@ -43,12 +53,59 @@
     </div>
     <script>
     // Redirection login si pas connecté
+    // NOTE: changed to point to the actual login HTML served by Apache
     if (!localStorage.getItem('p4_user')) {
-        window.location.href = '/login';
+        if (location.port === '8080') {
+            window.location.href = '/login';
+        } else {
+            window.location.href = '/power4-web/templates/login/login.html';
+        }
     }
     // Affiche le nom utilisateur sur le bouton compte
     const user = localStorage.getItem('p4_user') || 'Compte';
     document.getElementById('accountBtn').textContent = '👤 ' + user;
+    // Affiche le score actuel en haut à droite (si possible)
+    (function loadScoreAndLeaderboard() {
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const username = localStorage.getItem('p4_user');
+        if (!username) return;
+        // Détecte si on est servi par Apache sous /power4-web
+        const projectBase = (location.href.indexOf('/power4-web') !== -1) ? '/power4-web' : '';
+        const scoreEndpoint = projectBase + '/templates/login/score.php';
+        // Requête POST pour obtenir le score (score.php sans 'delta' retourne le score actuel)
+        fetch(scoreEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ username })
+        }).then(r => r.text()).then(txt => {
+            const n = parseInt(txt, 10);
+            if (!isNaN(n)) scoreDisplay.textContent = 'Score: ' + n;
+            else scoreDisplay.textContent = 'Score: —';
+        }).catch(err => {
+            console.warn('Impossible de charger le score', err);
+            scoreDisplay.textContent = 'Score: —';
+        });
+
+        // Charge le leaderboard (top 5) via leaderboard.php (GET)
+        const lbEndpoint = projectBase + '/templates/login/leaderboard.php';
+        fetch(lbEndpoint).then(r => r.json()).then(list => {
+            const ol = document.getElementById('leaderboardList');
+            ol.innerHTML = '';
+            if (!Array.isArray(list) || list.length === 0) {
+                const li = document.createElement('li'); li.textContent = 'Aucun joueur'; ol.appendChild(li);
+                return;
+            }
+            list.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item.username + ' — ' + item.score;
+                ol.appendChild(li);
+            });
+        }).catch(err => {
+            console.warn('Impossible de charger le leaderboard', err);
+            const ol = document.getElementById('leaderboardList');
+            ol.innerHTML = '<li style="color:#999;">Erreur</li>';
+        });
+    })();
     // Menu déroulant compte
     const accountBtn = document.getElementById('accountBtn');
     const accountMenu = document.getElementById('accountMenu');
@@ -57,8 +114,13 @@
         accountMenu.style.display = accountMenu.style.display === 'block' ? 'none' : 'block';
     };
     document.getElementById('logoutBtn').onclick = function() {
-        localStorage.removeItem('p4_user');
+    localStorage.removeItem('p4_user');
+    // go to the login page served by the appropriate server
+    if (location.port === '8080') {
         window.location.href = '/login';
+    } else {
+        window.location.href = '/power4-web/templates/login/login.html';
+    }
     };
     // Ferme le menu si clic ailleurs
     window.addEventListener('click', function(e) {
