@@ -1,9 +1,14 @@
 <?php
+// Inscription d'un utilisateur
+// - Reçoit POST {username, password}
+// - Vérifie que le nom n'existe pas, hash le mot de passe et l'insère.
+// - Retourne 'success', 'exists' ou 'error'.
+
 include '../../includes/db_connect.php';
 
 header('Content-Type: text/plain; charset=utf-8');
 
-// Set to true to return detailed DB errors (development only)
+// Activer DEBUG uniquement en dev pour afficher les erreurs SQL
 $DEBUG = true;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -15,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // Helper to log server-side errors (don't log passwords)
+    // Helper de log côté serveur (ne contient jamais de mots de passe)
     function log_msg($message) {
         $logDir = dirname(__DIR__, 2) . '/logs';
         if (!is_dir($logDir)) {
@@ -26,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         @file_put_contents($logFile, "[$time] " . $message . PHP_EOL, FILE_APPEND | LOCK_EX);
     }
 
-    // Check if username already exists
+    // Vérifie si le nom d'utilisateur existe déjà
     $check = $conn->prepare("SELECT id FROM users WHERE username = ?");
     if (!$check) {
         $err = $conn->error;
@@ -45,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $check->close();
 
-    // Hash the password and insert
+    // Hash du mot de passe puis insertion
     $hash = password_hash($password, PASSWORD_DEFAULT);
     $ins = $conn->prepare("INSERT INTO users (username, password) VALUES (?, ?)");
     if (!$ins) {

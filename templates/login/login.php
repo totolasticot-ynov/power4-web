@@ -1,4 +1,11 @@
 <?php
+// Contrôle d'authentification simple côté serveur.
+// - Reçoit POST {username, password} depuis le formulaire.
+// - Vérifie l'utilisateur en base et supporte deux formats stockés :
+//   1) hash sécurisé (password_hash) => on utilise password_verify
+//   2) ancien mot de passe en clair (legacy) => on accepte la connexion et on ré-hash pour sécuriser
+// Retourne en texte brut : 'success' ou 'invalid'.
+
 include '../../includes/db_connect.php';
 
 header('Content-Type: text/plain; charset=utf-8');
@@ -7,14 +14,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = isset($_POST['username']) ? trim($_POST['username']) : '';
     $password = isset($_POST['password']) ? trim($_POST['password']) : '';
 
+    // Vérification minimale des champs
     if ($username === '' || $password === '') {
         echo 'invalid';
         exit;
     }
 
-    // Get the stored hash for this username
+    // Récupère l'ID et la valeur stockée (hash ou ancien mot de passe)
     $stmt = $conn->prepare("SELECT id, password FROM users WHERE username = ?");
     if (!$stmt) {
+        // Erreur de préparation : on renvoie 'invalid' pour éviter de divulguer des détails
         echo 'invalid';
         exit;
     }
@@ -23,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->store_result();
 
     if ($stmt->num_rows === 0) {
-        // no such user
+        // utilisateur introuvable
         echo 'invalid';
         $stmt->close();
         $conn->close();
@@ -35,12 +44,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $ok = false;
 
-    // If stored value is a proper hash, use password_verify
+    // Si la valeur en base est un hash (password_hash), password_verify renverra true
     if (password_verify($password, $storedHash)) {
         $ok = true;
     } else {
-        // Backwards compatibility: if storedHash looks like a plain password (legacy), allow login
-        // and re-hash the password for future safety.
+        // Compatibilité : si l'ancien mot de passe était stocké en clair,
+        // on l'accepte (migration) puis on remplace par un hash sécurisé.
         if ($storedHash === $password) {
             $ok = true;
             $newHash = password_hash($password, PASSWORD_DEFAULT);

@@ -1,7 +1,9 @@
 
 
+// Eléments du DOM principaux
 const boardEl = document.getElementById("board");
 const resetBtn = document.getElementById("resetBtn");
+// currentPlayer: 1 ou 2, winner: 0 => pas de gagnant, sinon le numéro du joueur gagnant
 let currentPlayer = 1;
 let winner = 0;
 const message = document.getElementById('message');
@@ -18,7 +20,8 @@ let p4_win = parseInt(localStorage.getItem('p4_win') || '3');
 // Envoie la config au backend si besoin
 async function sendConfig() {
   try {
-  const res = await fetch(API_BASE_LOCAL + '/api/config', {
+    // Envoie la configuration choisie au backend (POST JSON {rows,cols,win})
+    const res = await fetch(API_BASE_LOCAL + '/api/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ rows: p4_rows, cols: p4_cols, win: p4_win })
@@ -32,7 +35,8 @@ async function sendConfig() {
 
 async function fetchBoard() {
   try {
-  const res = await fetch(API_BASE_LOCAL + "/api/board");
+    // Récupère l'état du jeu depuis le backend et met à jour l'affichage
+    const res = await fetch(API_BASE_LOCAL + "/api/board");
     if (!res.ok) throw new Error('API returned ' + res.status);
     const state = await res.json();
     renderBoard(state);
@@ -53,6 +57,7 @@ async function play(col) {
     return;
   }
   try {
+    // Envoi du coup au backend. On ajoute un header X-P4-Mode pour indiquer solo/multi.
     console.log('Sending play to', API_BASE_LOCAL + '/api/play', { column: col, mode });
     const res = await fetch(API_BASE_LOCAL + "/api/play", {
       method: "POST",
@@ -63,7 +68,7 @@ async function play(col) {
       const txt = await res.text().catch(() => '');
       throw new Error('play API ' + res.status + ' ' + txt);
     }
-    // Mise à jour immédiate du plateau pour voir notre coup
+    // Mise à jour immédiate du plateau pour afficher l'état renvoyé par le serveur
     const newState = await res.json().catch(() => null);
     if (newState) {
       renderBoard(newState);
@@ -79,7 +84,8 @@ async function play(col) {
 
 async function resetGame() {
   try {
-  await fetch(API_BASE_LOCAL + "/api/reset", { method: "POST" });
+    // Demande au backend de réinitialiser le plateau
+    await fetch(API_BASE_LOCAL + "/api/reset", { method: "POST" });
     fetchBoard();
   } catch (err) {
     console.error('reset error', err);
@@ -91,6 +97,7 @@ let lastMove = null;
 
 
 function renderBoard(state) {
+  // Reconstruit l'affichage du plateau depuis l'état JSON du serveur
   boardEl.innerHTML = "";
   currentPlayer = state.currentPlayer;
   winner = state.winner;
@@ -113,18 +120,19 @@ function renderBoard(state) {
     }
   }
 
-  // Affichage dynamique selon la config
+  // Affichage dynamique selon la config stockée (p4_rows / p4_cols)
   for (let r = 0; r < p4_rows; r++) {
     for (let c = 0; c < p4_cols; c++) {
       const cell = (state.board[r] || [])[c] || 0;
       const cellEl = document.createElement("div");
       cellEl.classList.add("cell");
-      cellEl.addEventListener("click", () => play(c));
+  // Clic sur une case -> jouer dans la colonne c
+  cellEl.addEventListener("click", () => play(c));
 
       if (cell !== 0) {
         const token = document.createElement("div");
         token.classList.add("token", cell === 1 ? "p1" : "p2");
-        // Animation de chute classique
+        // Animation de chute classique (ajoute une classe CSS et variables pour la durée/distance)
         if (lastMove && lastMove.row === r && lastMove.col === c) {
           token.classList.add("fall-real");
           token.style.setProperty('--fall-dist', `${(r) * 68}px`);
@@ -140,7 +148,7 @@ function renderBoard(state) {
       boardEl.appendChild(cellEl);
     }
   }
-  // CSS grid dynamique
+  // Ajuste la grille CSS en fonction du nombre de colonnes/lignes
   boardEl.style.gridTemplateColumns = `repeat(${p4_cols}, 1fr)`;
   boardEl.style.gridTemplateRows = `repeat(${p4_rows}, 1fr)`;
   window.oldBoard = state.board.map(row => row.slice());
