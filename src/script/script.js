@@ -6,6 +6,10 @@ let currentPlayer = 1;
 let winner = 0;
 const message = document.getElementById('message');
 
+// API base: prefer an existing global `API_BASE` if another template set it (avoids redeclaration),
+// otherwise compute a sensible default (relative when served by Go on :8080, or localhost otherwise)
+const API_BASE_LOCAL = (typeof API_BASE !== 'undefined') ? API_BASE : ((location.port === '8080') ? '' : 'http://localhost:8080');
+
 // Récupère la config stockée (localStorage)
 let p4_rows = parseInt(localStorage.getItem('p4_rows') || '6');
 let p4_cols = parseInt(localStorage.getItem('p4_cols') || '7');
@@ -13,35 +17,74 @@ let p4_win = parseInt(localStorage.getItem('p4_win') || '3');
 
 // Envoie la config au backend si besoin
 async function sendConfig() {
-  await fetch('/api/config', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ rows: p4_rows, cols: p4_cols, win: p4_win })
-  });
+  try {
+  const res = await fetch(API_BASE_LOCAL + '/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows: p4_rows, cols: p4_cols, win: p4_win })
+    });
+    return res.ok;
+  } catch (err) {
+    console.error('sendConfig error', err);
+    return false;
+  }
 }
 
 async function fetchBoard() {
-  const res = await fetch("/api/board");
-  const state = await res.json();
-  renderBoard(state);
-  updateMessage(state);
+  try {
+  const res = await fetch(API_BASE_LOCAL + "/api/board");
+    if (!res.ok) throw new Error('API returned ' + res.status);
+    const state = await res.json();
+    renderBoard(state);
+    updateMessage(state);
+  } catch (err) {
+    console.error('fetchBoard error', err);
+    if (message) message.innerHTML = "Impossible de contacter le backend du jeu (api). Démarre le serveur Go ou vérifie qu'il écoute sur http://localhost:8080";
+  }
 }
 
 async function play(col) {
   if (winner !== 0) return;
   const mode = localStorage.getItem('p4_mode') || 'multi';
-  await fetch("/api/play", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-P4-Mode": mode },
-    body: JSON.stringify({ column: col }),
-  });
-  // Mise à jour immédiate du plateau pour voir notre coup
-  fetchBoard();
+  // Validate column index
+  if (typeof col !== 'number' || isNaN(col) || col < 0 || col >= p4_cols) {
+    console.warn('play() called with invalid column:', col);
+    if (message) message.innerHTML = 'Colonne invalide.';
+    return;
+  }
+  try {
+    console.log('Sending play to', API_BASE_LOCAL + '/api/play', { column: col, mode });
+    const res = await fetch(API_BASE_LOCAL + "/api/play", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-P4-Mode": mode },
+      body: JSON.stringify({ column: col }),
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      throw new Error('play API ' + res.status + ' ' + txt);
+    }
+    // Mise à jour immédiate du plateau pour voir notre coup
+    const newState = await res.json().catch(() => null);
+    if (newState) {
+      renderBoard(newState);
+      updateMessage(newState);
+    } else {
+      fetchBoard();
+    }
+  } catch (err) {
+    console.error('play error', err);
+    if (message) message.innerHTML = 'Erreur: impossible d\'envoyer le coup au serveur. ' + (err && err.message ? err.message : '');
+  }
 }
 
 async function resetGame() {
-  await fetch("/api/reset", { method: "POST" });
-  fetchBoard();
+  try {
+  await fetch(API_BASE_LOCAL + "/api/reset", { method: "POST" });
+    fetchBoard();
+  } catch (err) {
+    console.error('reset error', err);
+    if (message) message.innerHTML = 'Erreur: impossible de réinitialiser la partie.';
+  }
 }
 
 let lastMove = null;

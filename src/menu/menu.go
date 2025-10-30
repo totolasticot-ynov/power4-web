@@ -39,8 +39,23 @@ func init() {
 // (Anciennes fonctions utilitaires supprimées car non utilisées)
 
 func Menu() error {
+	// small helper to set CORS headers and handle preflight
+	setCORS := func(w http.ResponseWriter, r *http.Request) bool {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-P4-Mode")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return true
+		}
+		return false
+	}
+
 	// API: configurer la taille et la difficulté
 	http.HandleFunc("/api/config", func(w http.ResponseWriter, r *http.Request) {
+		if setCORS(w, r) {
+			return
+		}
 		var req struct {
 			Rows int `json:"rows"`
 			Cols int `json:"cols"`
@@ -62,11 +77,13 @@ func Menu() error {
 
 	// API: register (tout accepté, aucune vérification)
 	http.HandleFunc("/api/register", func(w http.ResponseWriter, r *http.Request) {
+		if setCORS(w, r) { return }
 		w.WriteHeader(http.StatusOK)
 	})
 
 	// API: login (tout accepté, aucune vérification)
 	http.HandleFunc("/api/login", func(w http.ResponseWriter, r *http.Request) {
+		if setCORS(w, r) { return }
 		w.WriteHeader(http.StatusOK)
 	})
 	// Handlers statiques
@@ -75,6 +92,7 @@ func Menu() error {
 
 	// API: état du jeu
 	http.HandleFunc("/api/board", func(w http.ResponseWriter, r *http.Request) {
+		if setCORS(w, r) { return }
 		state.Winner, state.WinCells = checkWinner(state.Board)
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(state)
@@ -82,6 +100,7 @@ func Menu() error {
 
 	// API: jouer un coup
 	http.HandleFunc("/api/play", func(w http.ResponseWriter, r *http.Request) {
+		if setCORS(w, r) { return }
 		if state.Winner != 0 {
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(state)
@@ -90,10 +109,15 @@ func Menu() error {
 		var req struct{ Column int }
 		_ = json.NewDecoder(r.Body).Decode(&req)
 		col := req.Column
+		// simple validation: colonne dans les bornes
+		if col < 0 || col >= cols {
+			http.Error(w, "invalid column", http.StatusBadRequest)
+			return
+		}
 		// Place le pion du joueur humain
-		for r := rows - 1; r >= 0; r-- {
-			if state.Board[r][col] == 0 {
-				state.Board[r][col] = state.CurrentPlayer
+		for rr := rows - 1; rr >= 0; rr-- {
+			if state.Board[rr][col] == 0 {
+				state.Board[rr][col] = state.CurrentPlayer
 				state.CurrentPlayer = 3 - state.CurrentPlayer
 				break
 			}
@@ -169,6 +193,7 @@ func Menu() error {
 
 	// API: reset
 	http.HandleFunc("/api/reset", func(w http.ResponseWriter, r *http.Request) {
+		if setCORS(w, r) { return }
 		for r := range state.Board {
 			for c := range state.Board[r] {
 				state.Board[r][c] = 0
@@ -206,7 +231,9 @@ func Menu() error {
 		renderTemplate(w, "templates/index/index.html", nil)
 	})
 
-	log.Println("Serveur démarré sur http://localhost:8080 🚀")
+	log.Println("Serveur Go démarré sur http://localhost:8080 🚀")
+	log.Println("Page de connexion (Go server): http://localhost:8080/login")
+	log.Println("Si tu utilises Apache/XAMPP, page de connexion statique: http://127.0.0.1/power4-web/templates/login/login.html")
 	return http.ListenAndServe(":8080", nil)
 }
 
