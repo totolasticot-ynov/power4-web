@@ -14,16 +14,19 @@
         </div>
     </div>
     <!-- Score affiché en haut à droite, symétrique au bouton compte -->
+    <!-- Commentaire FR: zone d'affichage du score et du leaderboard (mise à jour via JS) -->
     <div id="scoreBox" style="position:fixed;top:24px;right:24px;z-index:102;text-align:right;">
         <div id="scoreDisplay" class="button" style="min-width:120px;display:inline-block;">Score: —</div>
         <div id="leaderboardBox" style="margin-top:8px;background:rgba(255,255,255,0.06);padding:8px;border-radius:8px;min-width:180px;text-align:left;box-shadow:0 2px 8px rgba(0,0,0,0.12);">
             <div style="font-weight:700;margin-bottom:6px;">Top joueurs</div>
+            <!-- Le JS injecte la liste ici depuis `templates/login/leaderboard.php` -->
             <ol id="leaderboardList" style="margin:0;padding-left:18px;"> 
                 <li style="color:#999;">Chargement...</li>
             </ol>
         </div>
     </div>
     <div class="menu-container">
+        <!-- Contenu principal du menu: titre, description et actions -->
         <h1>Bienvenue sur mon serveur Go 🚀</h1>
         <h2>Jouez au Puissance 4 contre un ami !</h2>
     <a href="../index/index.html" class="button">🎮 Jouer au Puissance 4</a>

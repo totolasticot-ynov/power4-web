@@ -1,222 +1,256 @@
-
+// Script principal du jeu (client)
+ // Gère l'UI du plateau + appels API + score
 
 // Eléments du DOM principaux
-const boardEl = document.getElementById("board");
-const resetBtn = document.getElementById("resetBtn");
-// currentPlayer: 1 ou 2, winner: 0 => pas de gagnant, sinon le numéro du joueur gagnant
-let currentPlayer = 1;
-let winner = 0;
-const message = document.getElementById('message');
+const boardEl = document.getElementById("board"); // Conteneur du plateau
+const resetBtn = document.getElementById("resetBtn"); // Bouton reset
+let currentPlayer = 1; // Joueur courant
+let winner = 0;        // 0 = pas de gagnant
+const message = document.getElementById('message'); // Zone d’affichage message
 
-// API base: prefer an existing global `API_BASE` if another template set it (avoids redeclaration),
-// otherwise compute a sensible default (relative when served by Go on :8080, or localhost otherwise)
-const API_BASE_LOCAL = (typeof API_BASE !== 'undefined') ? API_BASE : ((location.port === '8080') ? '' : 'http://localhost:8080');
+// API base: prend API_BASE global si existe sinon calcule par défaut
+const API_BASE_LOCAL =
+  (typeof API_BASE !== 'undefined')
+    ? API_BASE
+    : ((location.port === '8080') ? '' : 'http://localhost:8080');
 
-// Récupère la config stockée (localStorage)
-let p4_rows = parseInt(localStorage.getItem('p4_rows') || '6');
-let p4_cols = parseInt(localStorage.getItem('p4_cols') || '7');
-let p4_win = parseInt(localStorage.getItem('p4_win') || '3');
+// Récupère config stockée
+let p4_rows = parseInt(localStorage.getItem('p4_rows') || '6'); // Nb lignes
+let p4_cols = parseInt(localStorage.getItem('p4_cols') || '7'); // Nb colonnes
+let p4_win = parseInt(localStorage.getItem('p4_win') || '3');   // Alignement gagnant
 
-// Envoie la config au backend si besoin
+// Envoie config au backend (sync serveur)
 async function sendConfig() {
   try {
-    // Envoie la configuration choisie au backend (POST JSON {rows,cols,win})
-    const res = await fetch(API_BASE_LOCAL + '/api/config', {
+    const res = await fetch(API_BASE_LOCAL + '/api/config', { // API config
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ rows: p4_rows, cols: p4_cols, win: p4_win })
     });
-    return res.ok;
+    return res.ok; // Retourne succès ou non
   } catch (err) {
-    console.error('sendConfig error', err);
-    return false;
+    console.error('sendConfig error', err); // Log erreur
+    return false; // Indique échec
   }
 }
 
+// Récupère l’état du plateau + MAJ UI
 async function fetchBoard() {
   try {
-    // Récupère l'état du jeu depuis le backend et met à jour l'affichage
-    const res = await fetch(API_BASE_LOCAL + "/api/board");
-    if (!res.ok) throw new Error('API returned ' + res.status);
-    const state = await res.json();
-    renderBoard(state);
-    updateMessage(state);
+    const res = await fetch(API_BASE_LOCAL + "/api/board"); // API board
+    if (!res.ok) throw new Error('API returned ' + res.status); // Vérif status
+    const state = await res.json(); // Parse JSON état
+    renderBoard(state);             // Affiche plateau
+    updateMessage(state);           // Met à jour message
   } catch (err) {
-    console.error('fetchBoard error', err);
-    if (message) message.innerHTML = "Impossible de contacter le backend du jeu (api). Démarre le serveur Go ou vérifie qu'il écoute sur http://localhost:8080";
+    console.error('fetchBoard error', err); // Log erreur
+    if (message)
+      message.innerHTML =
+        "Impossible de contacter le backend du jeu."; // Message erreur UI
   }
 }
 
+// Joue un coup dans une colonne col
 async function play(col) {
-  if (winner !== 0) return;
-  const mode = localStorage.getItem('p4_mode') || 'multi';
-  // Validate column index
+  if (winner !== 0) return; // Stop si partie finie
+  const mode = localStorage.getItem('p4_mode') || 'multi'; // Mode solo/multi
+
+  // Vérifie validité colonne
   if (typeof col !== 'number' || isNaN(col) || col < 0 || col >= p4_cols) {
-    console.warn('play() called with invalid column:', col);
-    if (message) message.innerHTML = 'Colonne invalide.';
+    console.warn('Invalid column:', col); // Log warning
+    if (message) message.innerHTML = 'Colonne invalide.'; // Message UI
     return;
   }
+
   try {
-    // Envoi du coup au backend. On ajoute un header X-P4-Mode pour indiquer solo/multi.
-    console.log('Sending play to', API_BASE_LOCAL + '/api/play', { column: col, mode });
+    // Envoie du coup au backend
     const res = await fetch(API_BASE_LOCAL + "/api/play", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-P4-Mode": mode },
-      body: JSON.stringify({ column: col }),
+      headers: {
+        "Content-Type": "application/json",
+        "X-P4-Mode": mode // Indique mode au serveur
+      },
+      body: JSON.stringify({ column: col })
     });
+
     if (!res.ok) {
-      const txt = await res.text().catch(() => '');
+      const txt = await res.text().catch(() => ''); // Récup texte erreur
       throw new Error('play API ' + res.status + ' ' + txt);
     }
-    // Mise à jour immédiate du plateau pour afficher l'état renvoyé par le serveur
-    const newState = await res.json().catch(() => null);
+
+    const newState = await res.json().catch(() => null); // Parse réponse
     if (newState) {
-      renderBoard(newState);
-      updateMessage(newState);
-    } else {
-      fetchBoard();
-    }
+      renderBoard(newState);   // MAJ plateau
+      updateMessage(newState); // MAJ message
+    } else fetchBoard();       // Fallback : recharger plateau
   } catch (err) {
-    console.error('play error', err);
-    if (message) message.innerHTML = 'Erreur: impossible d\'envoyer le coup au serveur. ' + (err && err.message ? err.message : '');
+    console.error('play error', err); // Log erreur
+    if (message)
+      message.innerHTML = 'Erreur: impossible d\'envoyer le coup.'; // UI erreur
   }
 }
 
+// Réinitialise partie côté serveur + nettoyage client
 async function resetGame() {
   try {
-    // Demande au backend de réinitialiser le plateau
-    await fetch(API_BASE_LOCAL + "/api/reset", { method: "POST" });
-    // Réinitialise aussi le flag de score pour la prochaine partie
-    scoreUpdated = false;
-    // Supprime l'affichage local du delta de score (s'il existe)
-    const oldScoreEl = document.getElementById('scoreChange');
-    if (oldScoreEl && oldScoreEl.parentNode) oldScoreEl.parentNode.removeChild(oldScoreEl);
-    fetchBoard();
+    await fetch(API_BASE_LOCAL + "/api/reset", { method: "POST" }); // Reset backend
+    scoreUpdated = false; // Reset flag score
+    const oldScoreEl = document.getElementById('scoreChange'); // Élément score
+    if (oldScoreEl && oldScoreEl.parentNode) oldScoreEl.remove(); // Supprime affichage score
+    fetchBoard(); // Recharge plateau
   } catch (err) {
-    console.error('reset error', err);
-    if (message) message.innerHTML = 'Erreur: impossible de réinitialiser la partie.';
+    console.error('reset error', err); // Log erreur
+    if (message) message.innerHTML = 'Erreur: impossible de réinitialiser.'; // UI erreur
   }
 }
 
-let lastMove = null;
-// Empêche d'envoyer plusieurs fois le même update de score pour une même partie
-let scoreUpdated = false;
+let lastMove = null;      // Sauvegarde dernier coup
+let scoreUpdated = false; // Évite double mise à jour score
 
-// Détermine l'URL vers l'endpoint PHP qui gère le score.
-// On tente de deviner la base du projet si la page est servie via Apache sous /power4-web.
-const PROJECT_BASE = (location.href.indexOf('/power4-web') !== -1) ? '/power4-web' : '';
-const SCORE_ENDPOINT = PROJECT_BASE + '/templates/login/score.php';
+// Déduction de la base projet (cas Apache)
+const PROJECT_BASE =
+  (location.href.indexOf('/power4-web') !== -1)
+    ? '/power4-web'
+    : '';
+const SCORE_ENDPOINT = PROJECT_BASE + '/templates/login/score.php'; // API score
 
-// Rafraîchit le leaderboard si présent dans la page (et met à jour l'affichage du score si possible)
+// Rafraîchit leaderboard si présent
 function refreshLeaderboard() {
   try {
-    const lb = document.getElementById('leaderboardList');
-    if (!lb) return; // pas de leaderboard sur cette page
+    const lb = document.getElementById('leaderboardList'); // UL leaderboard
+    if (!lb) return; // Pas de leaderboard → stop
     const lbEndpoint = PROJECT_BASE + '/templates/login/leaderboard.php';
-    fetch(lbEndpoint).then(r => r.json()).then(list => {
-      lb.innerHTML = '';
-      if (!Array.isArray(list) || list.length === 0) {
-        const li = document.createElement('li'); li.textContent = 'Aucun joueur'; lb.appendChild(li);
-        return;
-      }
-      const me = localStorage.getItem('p4_user');
-      list.forEach(item => {
-        const li = document.createElement('li');
-        li.textContent = item.username + ' — ' + item.score;
-        if (me && item.username === me) {
-          li.style.fontWeight = '700';
-          li.style.color = '#2b8a3e';
+
+    fetch(lbEndpoint)
+      .then(r => r.json())     // Parse JSON classement
+      .then(list => {
+        lb.innerHTML = '';     // Vide liste
+
+        if (!Array.isArray(list) || list.length === 0) {
+          const li = document.createElement('li'); // Ajout "aucun joueur"
+          li.textContent = 'Aucun joueur';
+          lb.appendChild(li);
+          return;
         }
-        lb.appendChild(li);
-      });
-    }).catch(err => {
-      console.warn('Impossible de rafraîchir le leaderboard', err);
-    });
+
+        const me = localStorage.getItem('p4_user'); // Nom user courant
+
+        // Affiche chaque joueur
+        list.forEach(item => {
+          const li = document.createElement('li');
+          li.textContent = item.username + ' — ' + item.score;
+
+          if (me && item.username === me) {
+            li.style.fontWeight = '700'; // Mets en gras l’utilisateur
+            li.style.color = '#2b8a3e';  // Mets en vert
+          }
+          lb.appendChild(li);
+        });
+      })
+      .catch(err => console.warn('Leaderboard error', err)); // Log erreur
   } catch (e) {
-    console.warn('refreshLeaderboard error', e);
+    console.warn('refreshLeaderboard error', e); // Log erreur
   }
 }
 
-
+// Construit l’affichage du plateau
 function renderBoard(state) {
-  // Reconstruit l'affichage du plateau depuis l'état JSON du serveur
-  boardEl.innerHTML = "";
-  currentPlayer = state.currentPlayer;
-  winner = state.winner;
+  boardEl.innerHTML = "";              // Vide plateau
+  currentPlayer = state.currentPlayer; // MAJ joueur
+  winner = state.winner;               // MAJ gagnant
 
-  // Prépare la liste des cases gagnantes (pour surbrillance)
-  const winCells = Array.isArray(state.winCells) ? state.winCells.map(([r, c]) => `${r},${c}`) : [];
+  // Liste des cases gagnantes
+  const winCells = Array.isArray(state.winCells)
+    ? state.winCells.map(([r, c]) => `${r},${c}`)
+    : [];
 
-  // Trouver la dernière case jouée (pour l'animation)
+  // Si dernier coup supprimé → reset
   if (lastMove && state.board[lastMove.row][lastMove.col] === 0) {
     lastMove = null;
   }
-  // Recherche la dernière case jouée (diff entre board et oldBoard)
+
+  // Recherche du dernier coup (diff oldBoard)
   if (window.oldBoard) {
     for (let r = 0; r < state.board.length; r++) {
       for (let c = 0; c < state.board[r].length; c++) {
-        if (window.oldBoard[r][c] !== state.board[r][c] && state.board[r][c] !== 0) {
-          lastMove = { row: r, col: c, player: state.board[r][c] };
+        if (window.oldBoard[r][c] !== state.board[r][c] &&
+            state.board[r][c] !== 0) {
+          lastMove = { row: r, col: c, player: state.board[r][c] }; // Sauvegarde
         }
       }
     }
   }
 
-  // Affichage dynamique selon la config stockée (p4_rows / p4_cols)
+  // Affichage grille selon config
   for (let r = 0; r < p4_rows; r++) {
     for (let c = 0; c < p4_cols; c++) {
-      const cell = (state.board[r] || [])[c] || 0;
-      const cellEl = document.createElement("div");
-      cellEl.classList.add("cell");
-  // Clic sur une case -> jouer dans la colonne c
-  cellEl.addEventListener("click", () => play(c));
+      const cell = (state.board[r] || [])[c] || 0; // Valeur case
+      const cellEl = document.createElement("div"); // Div case
+      cellEl.classList.add("cell");                 // Classe CSS
 
+      // Clic = joue dans cette colonne
+      cellEl.addEventListener("click", () => play(c));
+
+      // Si pion présent
       if (cell !== 0) {
-        const token = document.createElement("div");
-        token.classList.add("token", cell === 1 ? "p1" : "p2");
-        // Animation de chute classique (ajoute une classe CSS et variables pour la durée/distance)
+        const token = document.createElement("div");     // Jeton
+        token.classList.add("token", cell === 1 ? "p1" : "p2"); // Couleur
+
+        // Animation si dernier coup
         if (lastMove && lastMove.row === r && lastMove.col === c) {
-          token.classList.add("fall-real");
-          token.style.setProperty('--fall-dist', `${(r) * 68}px`);
-          token.style.setProperty('--fall-dur', `${0.12 + r*0.07}s`);
+          token.classList.add("fall-real"); // Classe animation
+          token.style.setProperty('--fall-dist', `${r * 68}px`); // Distance
+          token.style.setProperty('--fall-dur', `${0.12 + r * 0.07}s`); // Durée
         }
+
+        // Surbrillance si case gagnante
         if (winCells.includes(`${r},${c}`)) {
           token.classList.add("win-token");
         }
-        cellEl.appendChild(token);
+
+        cellEl.appendChild(token); // Place jeton dans case
       } else {
-        cellEl.style.opacity = '0.5';
+        cellEl.style.opacity = '0.5'; // Case vide gris
       }
-      boardEl.appendChild(cellEl);
+
+      boardEl.appendChild(cellEl); // Ajoute case au plateau
     }
   }
-  // Ajuste la grille CSS en fonction du nombre de colonnes/lignes
+
+  // Ajuste taille grille CSS
   boardEl.style.gridTemplateColumns = `repeat(${p4_cols}, 1fr)`;
   boardEl.style.gridTemplateRows = `repeat(${p4_rows}, 1fr)`;
+
+  // Sauvegarde board actuel pour détection dernier coup
   window.oldBoard = state.board.map(row => row.slice());
 }
 
+// Met à jour message d’état
 function updateMessage(state) {
   if (state.winner === 1) {
     message.innerHTML = 'Joueur 1 (<span class="jaune">jaune</span>) a gagné !';
   } else if (state.winner === 2) {
     message.innerHTML = 'Joueur 2 (<span class="rouge">rouge</span>) a gagné !';
   } else if (isDraw(state.board)) {
-    message.innerHTML = '<span style="color:#5563DE;font-weight:bold;">Match nul&nbsp;!</span>';
+    message.innerHTML = '<span style="color:#5563DE;font-weight:bold;">Match nul !</span>';
   } else {
-    const color = state.currentPlayer === 1 ? '<span class="jaune">jaune</span>' : '<span class="rouge">rouge</span>';
-    message.innerHTML = `À ${color} de jouer.`;
+    const color =
+      state.currentPlayer === 1
+        ? '<span class="jaune">jaune</span>'
+        : '<span class="rouge">rouge</span>';
+    message.innerHTML = `À ${color} de jouer.`; // Message tour
   }
 
-  // Si la partie est terminée et qu'on joue en solo, on affiche combien de points ont été gagnés/perdus
+  // Gestion score solo
   try {
-    const mode = localStorage.getItem('p4_mode') || 'multi';
-    const user = localStorage.getItem('p4_user') || null;
-    if (mode === 'solo' && user && state.winner !== 0 && !scoreUpdated) {
-      // winner === 1 : joueur humain gagne ; winner === 2 : bot gagne
-      const delta = (state.winner === 1) ? 1 : -1;
+    const mode = localStorage.getItem('p4_mode') || 'multi'; // Mode
+    const user = localStorage.getItem('p4_user') || null;    // Nom joueur
 
-      // Affiche le delta sous le message principal
+    // Score uniquement en solo + partie finie + pas encore MAJ
+    if (mode === 'solo' && user && state.winner !== 0 && !scoreUpdated) {
+      const delta = (state.winner === 1) ? 1 : -1; // +1 si victoire, -1 si défaite
+
+      // Affichage du delta sous le message
       let scoreEl = document.getElementById('scoreChange');
       if (!scoreEl) {
         scoreEl = document.createElement('div');
@@ -224,49 +258,51 @@ function updateMessage(state) {
         scoreEl.style.marginTop = '8px';
         scoreEl.style.fontWeight = '700';
         scoreEl.style.fontSize = '0.95em';
-        scoreEl.style.color = state.winner === 1 ? '#2b8a3e' : '#c0392b';
-        if (message && message.parentNode) message.parentNode.insertBefore(scoreEl, message.nextSibling);
+        scoreEl.style.color =
+          state.winner === 1 ? '#2b8a3e' : '#c0392b'; // Vert/rouge
+        message.parentNode.insertBefore(scoreEl, message.nextSibling);
       }
-      scoreEl.textContent = (delta > 0 ? '+' + delta : String(delta)) + ' point' + (Math.abs(delta) > 1 ? 's' : '');
 
-      // Envoi POST application/x-www-form-urlencoded { username, delta } pour persister
+      scoreEl.textContent =
+        (delta > 0 ? '+' + delta : delta) + ' point' + (Math.abs(delta) > 1 ? 's' : '');
+
+      // Envoi du score au serveur PHP
       fetch(SCORE_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ username: user, delta: String(delta) })
-      }).then(res => res.text()).then(txt => {
-        console.log('score update response', txt);
-        // si le serveur renvoie le score mis à jour, on l'affiche dans #scoreDisplay
-        const newScore = parseInt(txt, 10);
-        if (!isNaN(newScore)) {
-          const sd = document.getElementById('scoreDisplay');
-          if (sd) sd.textContent = 'Score: ' + newScore;
-        }
-        scoreUpdated = true;
-        // rafraîchit le leaderboard si présent
-        refreshLeaderboard();
-      }).catch(err => {
-        console.warn('score update failed', err);
-        // Indique l'échec de la mise à jour serveur sans empêcher l'affichage local
-        if (scoreEl) scoreEl.textContent += ' (non sauvegardé)';
-      });
+      })
+        .then(res => res.text())
+        .then(txt => {
+          const newScore = parseInt(txt, 10); // Score mis à jour
+          if (!isNaN(newScore)) {
+            const sd = document.getElementById('scoreDisplay');
+            if (sd) sd.textContent = 'Score: ' + newScore; // MAJ UI score
+          }
+          scoreUpdated = true; // Empêche double update
+          refreshLeaderboard(); // Rafraîchit classement
+        })
+        .catch(err => {
+          console.warn('score update failed', err); // Log erreur
+          if (scoreEl) scoreEl.textContent += ' (non sauvegardé)'; // Indique échec
+        });
     }
   } catch (e) {
-    console.warn('score update error', e);
+    console.warn('score update error', e); // Log erreur
   }
 }
 
+// Vérifie si plateau plein
 function isDraw(board) {
   for (let r = 0; r < board.length; r++) {
     for (let c = 0; c < board[r].length; c++) {
-      if (board[r][c] === 0) return false;
+      if (board[r][c] === 0) return false; // Si case vide -> pas nul
     }
   }
-  return true;
+  return true; // Plateau plein -> match nul
 }
 
-if (resetBtn) resetBtn.onclick = resetGame;
+if (resetBtn) resetBtn.onclick = resetGame; // Bouton reset → resetGame()
 
-// Envoie la config au backend puis charge le plateau
+// Envoie config au backend, puis récupère plateau
 sendConfig().then(fetchBoard);
-

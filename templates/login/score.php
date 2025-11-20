@@ -1,8 +1,11 @@
 <?php
-// Endpoint simple pour récupérer ou mettre à jour le score d'un utilisateur
-// - Reçoit POST { username } pour récupérer le score actuel
-// - Reçoit POST { username, delta } pour ajouter (ou soustraire) une valeur au score
-// Retourne le score actuel en texte brut (ex: "42") ou "error" en cas de problème
+// Endpoint minimal pour gérer le score d'un utilisateur
+// Usage (POST x-www-form-urlencoded):
+// - Lire le score : POST { username }
+//   -> retourne en clair le score (ex: "42")
+// - Mettre à jour : POST { username, delta }
+//   -> augmente (ou diminue) le score, retourne le score mis à jour
+// Note : endpoint simple - pour production, ajouter une authentification (sessions/tokens).
 
 include '../../includes/db_connect.php';
 header('Content-Type: text/plain; charset=utf-8');
@@ -18,7 +21,7 @@ if ($username === '') {
     exit;
 }
 
-// Récupère le score actuel
+// Si pas de 'delta' : on renvoie le score actuel
 if (!isset($_POST['delta'])) {
     $stmt = $conn->prepare("SELECT score FROM users WHERE username = ?");
     if (!$stmt) { echo 'error'; exit; }
@@ -34,9 +37,8 @@ if (!isset($_POST['delta'])) {
     exit;
 }
 
-// Mise à jour du score
+// Mise à jour du score : applique delta et empêche valeur négative
 $delta = intval($_POST['delta']);
-// On protège la requête avec un prepared statement
 $up = $conn->prepare("UPDATE users SET score = GREATEST(0, score + ?) WHERE username = ?");
 if (!$up) { echo 'error'; exit; }
 $up->bind_param('is', $delta, $username);

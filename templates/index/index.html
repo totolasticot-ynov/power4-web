@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="../../assets/style/style.css">
 </head>
 <body>
+    <!-- Modal de sélection de la difficulté (garde la config dans localStorage) -->
     <div id="difficultyModal" class="modal" style="display:flex;align-items:center;justify-content:center;">
         <div class="modal-content" style="max-width:350px;">
             <h2>Choisissez la difficulté</h2>
@@ -17,6 +18,7 @@
             </form>
         </div>
     </div>
+    <!-- Modal de sélection du mode (solo vs multi) -->
     <div id="modeModal" class="modal" style="display:none;align-items:center;justify-content:center;">
         <div class="modal-content" style="max-width:350px;">
             <h2>Mode de jeu</h2>
@@ -24,6 +26,7 @@
             <button class="button" id="multiBtn">Multijoueur</button>
         </div>
     </div>
+    <!-- Conteneur principal du jeu (board, messages, boutons) -->
     <div class="container" id="gameContainer" style="display:none;">
         <h1 id="gameTitle">Puissance 4</h1>
         
@@ -32,6 +35,7 @@
         <button id="resetBtn" class="button">Recommencer</button>
         <a href="/" class="button" id="backMenuBtn">🏠 Retour menu</a>
     </div>
+    <!-- Le script ci-dessous gère la sélection difficulté/mode et navigation -->
     <script>
     // API base (match script.js): si le serveur Go est sur le port 8080 on utilise des paths relatifs
     const API_BASE = (location.port === '8080') ? '' : 'http://localhost:8080';
