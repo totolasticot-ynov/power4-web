@@ -28,10 +28,6 @@ var (
 	}
 )
 
- 
-
-
-
 func init() {
 	for i := range state.Board {
 		state.Board[i] = make([]int, cols)
@@ -83,15 +79,12 @@ func Menu() error {
 	})
 
 	// API: register (tout accepté, aucune vérification)
-	// Endpoints minimalistes pour l'interface (simples stubs si on n'utilise pas l'auth Go).
 	http.HandleFunc("/api/register", func(w http.ResponseWriter, r *http.Request) {
-		if setCORS(w, r) { return }
 		w.WriteHeader(http.StatusOK)
 	})
 
 	// API: login (tout accepté, aucune vérification)
 	http.HandleFunc("/api/login", func(w http.ResponseWriter, r *http.Request) {
-		if setCORS(w, r) { return }
 		w.WriteHeader(http.StatusOK)
 	})
 	// Handlers statiques
@@ -101,7 +94,9 @@ func Menu() error {
 	// API: état du jeu
 	// Renvoie l'état courant (board, currentPlayer, winner, winCells) en JSON
 	http.HandleFunc("/api/board", func(w http.ResponseWriter, r *http.Request) {
-		if setCORS(w, r) { return }
+		if setCORS(w, r) {
+			return
+		}
 		state.Winner, state.WinCells = checkWinner(state.Board)
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(state)
@@ -111,7 +106,9 @@ func Menu() error {
 	// Reçoit {column:int} en POST et place le jeton du joueur courant dans cette colonne.
 	// Valide la colonne, met à jour l'état, puis exécute éventuellement le bot en mode solo.
 	http.HandleFunc("/api/play", func(w http.ResponseWriter, r *http.Request) {
-		if setCORS(w, r) { return }
+		if setCORS(w, r) {
+			return
+		}
 		if state.Winner != 0 {
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(state)
@@ -158,7 +155,9 @@ func Menu() error {
 						break
 					}
 				}
-				if row == -1 { continue }
+				if row == -1 {
+					continue
+				}
 				state.Board[row][c] = 2
 				win, _ := checkWinner(state.Board)
 				state.Board[row][c] = 0
@@ -178,7 +177,9 @@ func Menu() error {
 						break
 					}
 				}
-				if row == -1 { continue }
+				if row == -1 {
+					continue
+				}
 				state.Board[row][c] = 1
 				win, _ := checkWinner(state.Board)
 				state.Board[row][c] = 0
@@ -210,7 +211,9 @@ func Menu() error {
 	// API: reset
 	// Réinitialise toutes les cases à 0 et remet le joueur courant à 1
 	http.HandleFunc("/api/reset", func(w http.ResponseWriter, r *http.Request) {
-		if setCORS(w, r) { return }
+		if setCORS(w, r) {
+			return
+		}
 		for r := range state.Board {
 			for c := range state.Board[r] {
 				state.Board[r][c] = 0
